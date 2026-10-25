@@ -46,13 +46,91 @@ document.addEventListener('DOMContentLoaded', () => {
     if (cpfEl) cpfEl.textContent = maskCPF(rawCpf);
 
     // Gerar avatar com a inicial do usuário
-    const firstLetter = (username.charAt(0) || 'U').toUpperCase();
-    const avatarEl = document.getElementById('user-avatar');
-    if (avatarEl) {
-      avatarEl.textContent = firstLetter;
+    function updateAvatar(name) {
+      const firstLetter = ((name || 'U').charAt(0) || 'U').toUpperCase();
+      const avatarEl = document.getElementById('user-avatar');
+      if (avatarEl) {
+        avatarEl.textContent = firstLetter;
+      }
+    }
+    updateAvatar(username);
+
+    // 5. Configurar Modal de Edição de Perfil
+    const editNameInput = document.getElementById('edit-name');
+    const editEmailInput = document.getElementById('edit-email');
+    const editPhoneInput = document.getElementById('edit-phone');
+    const editCpfInput = document.getElementById('edit-cpf');
+    const btnSaveProfile = document.getElementById('btnSaveProfile');
+
+    $('#editProfileModal').on('show.bs.modal', function () {
+      if (editNameInput) editNameInput.value = userData.username || '';
+      if (editEmailInput) editEmailInput.value = userData.email || '';
+      if (editPhoneInput) editPhoneInput.value = userData.phone || '';
+      if (editCpfInput) editCpfInput.value = maskCPF(userData.cpf || rawCpf);
+    });
+
+    if (editPhoneInput) {
+      editPhoneInput.addEventListener('input', (e) => {
+        let v = e.target.value.replace(/\D/g, '');
+        if (v.length > 11) v = v.substring(0, 11);
+        if (v.length > 10) {
+          v = v.replace(/^(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+        } else if (v.length > 6) {
+          v = v.replace(/^(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3');
+        } else if (v.length > 2) {
+          v = v.replace(/^(\d{2})(\d{0,5})/, '($1) $2');
+        }
+        e.target.value = v;
+      });
     }
 
-    // 5. Ação do Botão de Logout
+    if (btnSaveProfile) {
+      btnSaveProfile.addEventListener('click', () => {
+        const newName = editNameInput.value.trim();
+        const newEmail = editEmailInput.value.trim();
+        const newPhone = editPhoneInput.value.trim();
+
+        if (!newName || !newEmail) {
+          Swal.fire({
+            icon: 'warning',
+            title: 'Campos Obrigatórios',
+            text: 'Nome e E-mail não podem ficar vazios.',
+            confirmButtonColor: '#FF0043'
+          });
+          return;
+        }
+
+        userData.username = newName;
+        userData.email = newEmail;
+        userData.phone = newPhone;
+
+        localStorage.setItem('user_data', JSON.stringify(userData));
+        const session = JSON.parse(localStorage.getItem('mock_auth_session') || '{}');
+        if (session && session.user) {
+          session.user.username = newName;
+          session.user.email = newEmail;
+          session.user.phone = newPhone;
+          localStorage.setItem('mock_auth_session', JSON.stringify(session));
+        }
+
+        if (welcomeEl) welcomeEl.textContent = newName;
+        if (emailEl) emailEl.textContent = newEmail;
+        updateAvatar(newName);
+
+        $('#editProfileModal').modal('hide');
+
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'success',
+          title: 'Perfil atualizado com sucesso!',
+          showConfirmButton: false,
+          timer: 2000
+        });
+      });
+    }
+
+    // 6. Ação do Botão de Logout
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) {
       logoutBtn.addEventListener('click', () => {

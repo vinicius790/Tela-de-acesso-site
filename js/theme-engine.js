@@ -190,6 +190,63 @@
     }
     animateParticles();
 
+    // Synthesized Web Audio Ki Aura Sound
+    function playKiSound(isPowerUp) {
+        try {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) return;
+            const ctx = new AudioCtx();
+            if (ctx.state === 'suspended') {
+                ctx.resume();
+            }
+
+            const now = ctx.currentTime;
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+
+            if (isPowerUp) {
+                // Rising Ki Aura charging sweep with harmonic frequency
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(90, now);
+                osc.frequency.exponentialRampToValueAtTime(560, now + 0.4);
+                osc.frequency.exponentialRampToValueAtTime(920, now + 0.7);
+
+                gain.gain.setValueAtTime(0.01, now);
+                gain.gain.linearRampToValueAtTime(0.25, now + 0.15);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+
+                // Sub-oscillator for electric spark vibration
+                const spark = ctx.createOscillator();
+                const sparkGain = ctx.createGain();
+                spark.type = 'square';
+                spark.frequency.setValueAtTime(140, now);
+                spark.frequency.linearRampToValueAtTime(720, now + 0.7);
+                sparkGain.gain.setValueAtTime(0.08, now);
+                sparkGain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+
+                spark.connect(sparkGain);
+                sparkGain.connect(ctx.destination);
+                spark.start(now);
+                spark.stop(now + 0.8);
+            } else {
+                // Gentle powering down whoosh
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(440, now);
+                osc.frequency.exponentialRampToValueAtTime(110, now + 0.35);
+
+                gain.gain.setValueAtTime(0.15, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+            }
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now);
+            osc.stop(now + (isPowerUp ? 0.8 : 0.35));
+        } catch (e) {
+            // Audio context safely ignored if blocked by autoplay policy
+        }
+    }
+
     // Theme Management
     function setTheme(theme) {
         document.body.classList.remove(THEMES.EXECUTIVE, THEMES.SUPER_SAIYAN);
@@ -218,6 +275,7 @@
         toggleBtn.addEventListener('click', () => {
             const current = localStorage.getItem(STORAGE_KEY) || THEMES.EXECUTIVE;
             const next = current === THEMES.EXECUTIVE ? THEMES.SUPER_SAIYAN : THEMES.EXECUTIVE;
+            playKiSound(next === THEMES.SUPER_SAIYAN);
             setTheme(next);
         });
 

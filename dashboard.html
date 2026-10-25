@@ -11,11 +11,7 @@
 
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
-    <link
-      rel="shortcut icon"
-      href="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSJU32uQwa0-Q_i3LmbsIf-CPQXghW1K2MQLg&usqp=CAU"
-      type="image/x-icon"
-    />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path fill='%23FF0043' d='M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5'/></svg>" />
     <link rel="stylesheet" href="vegeta.css" />
     <link rel="stylesheet" href="styles/particles.css" />
     <style>
@@ -86,6 +82,7 @@
     <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" defer></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.bundle.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
+    <script src="js/theme-engine.js" defer></script>
     <script src="js/dashboard.js" defer></script>
     <script src="js/dashboard-charts.js" defer></script>
     <script src="js/export-service.js" defer></script>
@@ -103,6 +100,9 @@
           </div>
         </div>
         <div class="d-flex gap-2">
+          <button id="btnEditProfile" class="btn btn-outline-warning btn-sm px-3 mr-2 font-weight-bold" data-toggle="modal" data-target="#editProfileModal">
+            <i class="fas fa-user-edit mr-1"></i> Editar Perfil
+          </button>
           <button id="btnExportData" class="btn btn-outline-info btn-sm px-3 mr-2 font-weight-bold" onclick="window.exportService.exportSessionReport()">
             <i class="fas fa-file-download mr-1"></i> Exportar Auditoria (JSON)
           </button>
@@ -183,6 +183,46 @@
       <div class="mt-2 text-center">
         <a href="index.html" class="text-muted small mr-3">← Voltar ao Login</a>
         <a href="tests/index.html" class="text-muted small">🧪 Executar Testes Unitários</a>
+      </div>
+    </div>
+
+    <!-- Modal de Edição de Perfil -->
+    <div class="modal fade" id="editProfileModal" tabindex="-1" role="dialog" aria-labelledby="editProfileModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content bg-dark text-white border-secondary">
+          <div class="modal-header border-secondary">
+            <h5 class="modal-title" id="editProfileModalLabel"><i class="fas fa-user-cog mr-2 text-warning"></i>Editar Dados Cadastrais</h5>
+            <button type="button" class="close text-white" data-dismiss="modal" aria-label="Fechar">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <form id="formEditProfile" onsubmit="return false;">
+              <div class="form-group text-left">
+                <label for="edit-name"><i class="fas fa-user mr-2 text-muted"></i>Nome de Usuário</label>
+                <input type="text" class="form-control bg-secondary text-white border-0" id="edit-name" required />
+              </div>
+              <div class="form-group text-left">
+                <label for="edit-email"><i class="fas fa-envelope mr-2 text-muted"></i>E-mail</label>
+                <input type="email" class="form-control bg-secondary text-white border-0" id="edit-email" required />
+              </div>
+              <div class="form-group text-left">
+                <label for="edit-phone"><i class="fas fa-phone mr-2 text-muted"></i>Telefone Celular</label>
+                <input type="text" class="form-control bg-secondary text-white border-0" id="edit-phone" placeholder="(11) 99999-9999" maxlength="15" />
+              </div>
+              <div class="form-group text-left">
+                <label for="edit-cpf"><i class="fas fa-id-card mr-2 text-muted"></i>CPF (Bloqueado para segurança)</label>
+                <input type="text" class="form-control bg-dark text-muted border-secondary" id="edit-cpf" disabled readonly />
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer border-secondary">
+            <button type="button" class="btn btn-outline-light btn-sm" data-dismiss="modal">Cancelar</button>
+            <button type="button" class="btn btn-primary btn-sm font-weight-bold" id="btnSaveProfile">
+              <i class="fas fa-save mr-1"></i> Salvar Alterações
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
