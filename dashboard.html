@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard — Painel do Usuário & Analytics</title>
+    
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#FF0043" />
+
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+    <link
+      rel="shortcut icon"
+      href="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSJU32uQwa0-Q_i3LmbsIf-CPQXghW1K2MQLg&usqp=CAU"
+      type="image/x-icon"
+    />
+    <link rel="stylesheet" href="vegeta.css" />
+    <link rel="stylesheet" href="styles/particles.css" />
+    <style>
+      .dashboard-container {
+        max-width: 980px;
+        width: 100%;
+        background: rgba(15, 23, 42, 0.92);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 36px;
+        border-radius: 14px;
+        box-shadow: 0 20px 45px rgba(0, 0, 0, 0.8);
+        text-align: left;
+        margin: 30px auto;
+      }
+      .avatar-container {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: #FF0043;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2.2rem;
+        color: #fff;
+        font-weight: bold;
+        box-shadow: 0 4px 15px rgba(255, 0, 67, 0.4);
+      }
+      .stat-card {
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 10px;
+        padding: 22px;
+        text-align: center;
+        color: #fff;
+        transition: transform 0.25s, border-color 0.25s;
+      }
+      .stat-card:hover {
+        transform: translateY(-4px);
+        border-color: #FF0043;
+      }
+      .stat-card h3 {
+        font-size: 1.8rem;
+        margin-bottom: 6px;
+        color: #FF0043;
+        font-weight: 700;
+      }
+      .user-info-text p {
+        margin-bottom: 4px;
+        color: #CBD5E1;
+      }
+      .chart-container-box {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 25px;
+      }
+      .chart-container-box h6 {
+        color: #E2E8F0;
+        font-weight: 600;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" defer></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.bundle.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
+    <script src="js/dashboard.js" defer></script>
+    <script src="js/dashboard-charts.js" defer></script>
+    <script src="js/export-service.js" defer></script>
+  </head>
+  <body class="executive-dark">
+    <div class="dashboard-container">
+      <!-- Cabeçalho do Perfil -->
+      <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom border-secondary flex-wrap">
+        <div class="d-flex align-items-center mb-3 mb-md-0">
+          <div class="avatar-container mr-3" id="user-avatar">U</div>
+          <div class="user-info-text">
+            <h4 class="text-white mb-1" id="welcome-username">Carregando...</h4>
+            <p class="mb-0"><i class="fas fa-envelope mr-2 text-muted"></i><span id="user-email">-</span></p>
+            <p class="mb-0"><i class="fas fa-id-card mr-2 text-muted"></i>CPF: <span id="user-cpf">-</span></p>
+          </div>
+        </div>
+        <div class="d-flex gap-2">
+          <button id="btnExportData" class="btn btn-outline-info btn-sm px-3 mr-2 font-weight-bold" onclick="window.exportService.exportSessionReport()">
+            <i class="fas fa-file-download mr-1"></i> Exportar Auditoria (JSON)
+          </button>
+          <button id="logout-btn" class="btn btn-outline-danger btn-sm px-3 font-weight-bold">
+            <i class="fas fa-sign-out-alt mr-1"></i> Encerrar Sessão
+          </button>
+        </div>
+      </div>
+
+      <!-- Métricas Resumidas -->
+      <h5 class="text-white mb-3"><i class="fas fa-chart-line mr-2"></i>Estatísticas do Portal</h5>
+      <div class="row mb-4">
+        <div class="col-md-4 mb-3 mb-md-0">
+          <div class="stat-card">
+            <h3 id="stat-sessions">1</h3>
+            <p class="mb-0 text-muted">Sessão Autenticada</p>
+          </div>
+        </div>
+        <div class="col-md-4 mb-3 mb-md-0">
+          <div class="stat-card">
+            <h3 id="stat-access">100%</h3>
+            <p class="mb-0 text-muted">Integridade de Dados</p>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <div class="stat-card">
+            <h3 id="stat-security">SHA-256</h3>
+            <p class="mb-0 text-muted">Web Cryptography API</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Seção Gráfica Interativa (Canvas Analytics) -->
+      <div class="row">
+        <div class="col-lg-8 mb-4">
+          <div class="chart-container-box">
+            <h6><i class="fas fa-wave-square text-danger"></i> Frequência de Acessos Recentes (7 Dias)</h6>
+            <canvas id="accessChartCanvas" style="width: 100%; height: 200px; display: block;"></canvas>
+          </div>
+        </div>
+        <div class="col-lg-4 mb-4">
+          <div class="chart-container-box text-center">
+            <h6><i class="fas fa-shield-alt text-primary"></i> Score de Segurança</h6>
+            <canvas id="securityDonutCanvas" style="width: 100%; height: 200px; display: block; margin: 0 auto;"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Seção 2FA e Token -->
+      <div class="row mb-4">
+        <div class="col-md-7 mb-3 mb-md-0">
+          <div class="card bg-dark text-white border-secondary h-100">
+            <div class="card-body">
+              <h5 class="card-title"><i class="fas fa-key mr-2 text-warning"></i>Autenticação em 2 Etapas (TOTP)</h5>
+              <p class="card-text text-muted small">
+                Escaneie o código QR com o Google Authenticator ou Microsoft Authenticator para vincular o gerador de códigos temporários ao seu perfil.
+              </p>
+              <div id="qrCodeContainer" class="mt-3 text-center"></div>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-5">
+          <div class="card bg-dark text-white border-secondary h-100">
+            <div class="card-body">
+              <h5 class="card-title"><i class="fas fa-file-contract mr-2 text-success"></i>Protocolo Ativo</h5>
+              <ul class="list-unstyled text-muted small mb-0">
+                <li class="mb-2"><strong>JWT Token:</strong> <code class="text-info">Header.Payload.Signature</code></li>
+                <li class="mb-2"><strong>Criptografia:</strong> SHA-256 Nativo com Salt</li>
+                <li class="mb-2"><strong>Validador:</strong> CPF Módulo 11 Ponderado</li>
+                <li class="mb-2"><strong>Geolocalização:</strong> ViaCEP / BrasilAPI</li>
+                <li><strong>Status de Auditoria:</strong> <span class="badge badge-success">Conforme</span></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-2 text-center">
+        <a href="index.html" class="text-muted small mr-3">← Voltar ao Login</a>
+        <a href="tests/index.html" class="text-muted small">🧪 Executar Testes Unitários</a>
+      </div>
+    </div>
+
+    <script>
+      window.addEventListener('DOMContentLoaded', () => {
+        const qrContainer = document.getElementById('qrCodeContainer');
+        if (qrContainer && window.exportService) {
+          window.exportService.renderMockQrCode(qrContainer);
+        }
+      });
+    </script>
+  </body>
+</html>

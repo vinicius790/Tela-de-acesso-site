@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Portal de Acesso — Entrar / Cadastrar</title>
+  
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#FF0043" />
+
+  <!-- Fontes & Ícones -->
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
+  
+  <!-- Estilos Customizados -->
+  <link rel="stylesheet" href="vegeta.css" />
+  <link rel="stylesheet" href="styles/particles.css" />
+  
+  <link rel="shortcut icon" href="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSJU32uQwa0-Q_i3LmbsIf-CPQXghW1K2MQLg&usqp=CAU" type="image/x-icon" />
+
+  <style>
+    /* Estilos das Abas de Alternância e Barra de Força de Senha */
+    .auth-tabs {
+      display: flex;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      padding: 4px;
+      margin-bottom: 25px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      background: transparent;
+      color: #A1A1AA;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      outline: none;
+    }
+
+    .tab-btn.active {
+      background: #FF0043;
+      color: #FFF;
+      box-shadow: 0 4px 12px rgba(255, 0, 67, 0.4);
+    }
+
+    .tab-btn:hover:not(.active) {
+      color: #FFF;
+    }
+
+    .password-strength-meter {
+      height: 4px;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 2px;
+      margin-top: 6px;
+      overflow: hidden;
+    }
+
+    .password-strength-bar {
+      height: 100%;
+      width: 0%;
+      transition: all 0.3s ease;
+    }
+
+    .strength-text {
+      font-size: 0.72em;
+      margin-top: 4px;
+      display: block;
+      text-align: right;
+    }
+
+    .support-link {
+      color: #A1A1AA;
+      font-size: 0.85em;
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .support-link:hover {
+      color: #FF0043;
+      text-decoration: underline;
+    }
+
+    .links-footer {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      margin-top: 20px;
+      font-size: 0.82em;
+    }
+
+    .links-footer a {
+      color: #71717A;
+      text-decoration: none;
+    }
+
+    .links-footer a:hover {
+      color: #E4E4E7;
+    }
+  </style>
+</head>
+<body class="executive-dark">
+  <div class="container my-5">
+    <div class="row justify-content-center">
+      <div class="login-box col-md-8 col-lg-7">
+        
+        <!-- Abas de Alternância: Login vs Cadastro -->
+        <div class="auth-tabs" role="tablist">
+          <button class="tab-btn active" id="tab-login" type="button" role="tab" aria-selected="true" onclick="switchTab('login')">
+            <i class="fas fa-sign-in-alt mr-2"></i>Entrar
+          </button>
+          <button class="tab-btn" id="tab-register" type="button" role="tab" aria-selected="false" onclick="switchTab('register')">
+            <i class="fas fa-user-plus mr-2"></i>Cadastrar
+          </button>
+        </div>
+
+        <!-- Formulário de Login -->
+        <form id="login-form" class="auth-form" novalidate>
+          <h2 class="text-center mb-4">Acesse sua Conta</h2>
+          
+          <div class="form-group text-left">
+            <label for="login-username"><i class="fas fa-user mr-2"></i>Usuário <span class="text-danger" title="Obrigatório">*</span></label>
+            <input type="text" class="form-control" id="login-username" name="username" required aria-required="true" placeholder="Digite seu usuário ou e-mail" autocomplete="username" />
+          </div>
+
+          <div class="form-group text-left">
+            <label for="login-password"><i class="fas fa-lock mr-2"></i>Senha <span class="text-danger" title="Obrigatório">*</span></label>
+            <input type="password" class="form-control" id="login-password" name="password" required aria-required="true" placeholder="••••••••" autocomplete="current-password" />
+          </div>
+
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <div class="custom-control custom-checkbox text-left">
+              <input type="checkbox" class="custom-control-input" id="remember-me">
+              <label class="custom-control-label text-white" for="remember-me">Lembrar-me</label>
+            </div>
+            <a href="#" class="support-link" id="linkForgotPass">Esqueci minha senha</a>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block py-2 font-weight-bold" id="btnLoginSubmit">
+            <i class="fas fa-arrow-right mr-2"></i>Entrar no Sistema
+          </button>
+        </form>
+
+        <!-- Formulário de Cadastro -->
+        <form id="register-form" class="auth-form" style="display: none;" novalidate>
+          <h2 class="text-center mb-4">Crie sua Conta</h2>
+
+          <div class="form-group text-left">
+            <label for="reg-username"><i class="fas fa-user mr-2"></i>Usuário <span class="text-danger" title="Obrigatório">*</span></label>
+            <input type="text" class="form-control" id="reg-username" name="username" required aria-required="true" placeholder="Escolha um nome de usuário" autocomplete="username" />
+          </div>
+
+          <div class="form-group text-left">
+            <label for="reg-email"><i class="fas fa-envelope mr-2"></i>E-mail <span class="text-danger" title="Obrigatório">*</span></label>
+            <input type="email" class="form-control" id="reg-email" name="email" required aria-required="true" placeholder="seu@email.com" autocomplete="email" />
+          </div>
+
+          <div class="form-group text-left">
+            <label for="reg-cpf"><i class="fas fa-id-card mr-2"></i>CPF <span class="text-danger" title="Obrigatório">*</span></label>
+            <input type="text" class="form-control" id="reg-cpf" name="cpf" required aria-required="true" placeholder="000.000.000-00" maxlength="14" />
+          </div>
+
+          <!-- Campo Inteligente de CEP (ViaCEP / BrasilAPI) -->
+          <div class="form-group text-left">
+            <label for="reg-cep"><i class="fas fa-map-marker-alt mr-2"></i>CEP (Consulta Automática ViaCEP / BrasilAPI)</label>
+            <div class="input-group">
+              <input type="text" class="form-control" id="reg-cep" name="cep" placeholder="00000-000" maxlength="9" />
+              <div class="input-group-append">
+                <span class="input-group-text bg-dark text-muted" id="cep-feedback"><i class="fas fa-search"></i></span>
+              </div>
+            </div>
+            <small class="text-muted" id="cep-location" style="display:none;"></small>
+          </div>
+
+          <div class="form-group text-left">
+            <label for="reg-password"><i class="fas fa-lock mr-2"></i>Senha <span class="text-danger" title="Obrigatório">*</span></label>
+            <input type="password" class="form-control" id="reg-password" name="password" required aria-required="true" placeholder="Mínimo 6 caracteres" autocomplete="new-password" />
+            <div class="password-strength-meter">
+              <div class="password-strength-bar" id="reg-strength-bar"></div>
+            </div>
+            <span class="strength-text" id="reg-strength-text">Força: -</span>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block py-2 font-weight-bold" id="btnRegisterSubmit">
+            <i class="fas fa-check-circle mr-2"></i>Finalizar Cadastro
+          </button>
+        </form>
+
+        <!-- Links Auxiliares -->
+        <div class="links-footer">
+          <a href="tests/index.html">🧪 Executar Testes Unitários</a>
+          <span>•</span>
+          <a href="goku.html">Modo Clássico</a>
+        </div>
+
+        <div id="message" class="mt-3"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bibliotecas Externas -->
+  <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+  <!-- Módulos da Aplicação -->
+  <script src="js/security.js"></script>
+  <script src="js/notifications.js"></script>
+  <script src="js/validators.js"></script>
+  <script src="js/cep-service.js"></script>
+  <script src="js/auth-service.js"></script>
+  <script src="js/theme-engine.js"></script>
+
+  <!-- Controlador de Abas e Interatividade -->
+  <script>
+    function switchTab(mode) {
+      const loginForm = document.getElementById('login-form');
+      const registerForm = document.getElementById('register-form');
+      const tabLogin = document.getElementById('tab-login');
+      const tabRegister = document.getElementById('tab-register');
+
+      if (mode === 'login') {
+        loginForm.style.display = 'block';
+        registerForm.style.display = 'none';
+        tabLogin.classList.add('active');
+        tabLogin.setAttribute('aria-selected', 'true');
+        tabRegister.classList.remove('active');
+        tabRegister.setAttribute('aria-selected', 'false');
+      } else {
+        loginForm.style.display = 'none';
+        registerForm.style.display = 'block';
+        tabRegister.classList.add('active');
+        tabRegister.setAttribute('aria-selected', 'true');
+        tabLogin.classList.remove('active');
+        tabLogin.setAttribute('aria-selected', 'false');
+      }
+    }
+
+    document.getElementById('linkForgotPass').addEventListener('click', (e) => {
+      e.preventDefault();
+      Swal.fire({
+        title: 'Recuperar Acesso',
+        input: 'email',
+        inputLabel: 'Digite seu e-mail cadastrado',
+        inputPlaceholder: 'exemplo@dominio.com',
+        confirmButtonText: 'Enviar Link',
+        confirmButtonColor: '#FF0043',
+        showCancelButton: true,
+        cancelButtonText: 'Cancelar'
+      }).then((result) => {
+        if (result.isConfirmed && result.value) {
+          Swal.fire({
+            icon: 'success',
+            title: 'E-mail enviado!',
+            text: 'Verifique sua caixa de entrada para redefinir sua senha.',
+            confirmButtonColor: '#FF0043'
+          });
+        }
+      });
+    });
+
+    // Medidor de força de senha no cadastro
+    const regPass = document.getElementById('reg-password');
+    const strengthBar = document.getElementById('reg-strength-bar');
+    const strengthText = document.getElementById('reg-strength-text');
+
+    if (regPass) {
+      regPass.addEventListener('input', () => {
+        const val = regPass.value;
+        let score = 0;
+        if (val.length >= 6) score += 25;
+        if (val.length >= 8) score += 25;
+        if (/[A-Z]/.test(val)) score += 25;
+        if (/[0-9]/.test(val) && /[^A-Za-z0-9]/.test(val)) score += 25;
+
+        strengthBar.style.width = score + '%';
+        if (score <= 25) {
+          strengthBar.style.backgroundColor = '#EF4444';
+          strengthText.innerText = 'Força: Fraca';
+          strengthText.style.color = '#EF4444';
+        } else if (score <= 50) {
+          strengthBar.style.backgroundColor = '#F59E0B';
+          strengthText.innerText = 'Força: Razoável';
+          strengthText.style.color = '#F59E0B';
+        } else if (score <= 75) {
+          strengthBar.style.backgroundColor = '#3B82F6';
+          strengthText.innerText = 'Força: Boa';
+          strengthText.style.color = '#3B82F6';
+        } else {
+          strengthBar.style.backgroundColor = '#10B981';
+          strengthText.innerText = 'Força: Excelente!';
+          strengthText.style.color = '#10B981';
+        }
+      });
+    }
+
+    // Máscara dinâmica de CPF
+    const cpfInput = document.getElementById('reg-cpf');
+    if (cpfInput) {
+      cpfInput.addEventListener('input', (e) => {
+        let v = e.target.value.replace(/\D/g, '');
+        if (v.length > 11) v = v.substring(0, 11);
+        v = v.replace(/(\d{3})(\d)/, '$1.$2');
+        v = v.replace(/(\d{3})(\d)/, '$1.$2');
+        v = v.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+        e.target.value = v;
+      });
+    }
+
+    // Integração automática de CEP (ViaCEP / BrasilAPI)
+    const cepInput = document.getElementById('reg-cep');
+    const cepFeedback = document.getElementById('cep-feedback');
+    const cepLocation = document.getElementById('cep-location');
+
+    if (window.cepService && cepInput) {
+      window.cepService.bindCepInput(cepInput, (address) => {
+        if (address && address.city) {
+          cepFeedback.innerHTML = '<i class="fas fa-check text-success"></i>';
+          cepLocation.style.display = 'block';
+          cepLocation.textContent = `📍 ${address.city} - ${address.state} (${address.neighborhood || 'Centro'})`;
+          cepLocation.className = 'text-success small mt-1';
+        }
+      });
+    }
+
+    // Service Worker registration
+    if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
+      navigator.serviceWorker.register('./sw.js').catch(() => {});
+    }
+  </script>
+
+  <!-- Script Principal de Submissão e Integração de Auth -->
+  <script src="script.js"></script>
+</body>
+</html>

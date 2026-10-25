@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Runner Interativo — Portal de Acesso</title>
+    <link rel="stylesheet" href="../vegeta.css">
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-color: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+            --success-color: #22c55e;
+            --danger-color: #ef4444;
+            --primary-color: #3b82f6;
+            --primary-hover: #2563eb;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin: 0;
+            color: var(--text-color);
+        }
+
+        .btn-run {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-run:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .summary-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .summary-card.success {
+            border-left: 5px solid var(--success-color);
+        }
+
+        .summary-card.has-failures {
+            border-left: 5px solid var(--danger-color);
+        }
+
+        .summary-card h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 15px;
+        }
+
+        .stat-item {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .stat-label {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 1.25rem;
+            font-weight: bold;
+        }
+
+        .text-success { color: var(--success-color); }
+        .text-danger { color: var(--danger-color); }
+
+        .test-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .test-item {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+            transition: border-color 0.2s;
+        }
+
+        .test-item.passed {
+            border-left: 4px solid var(--success-color);
+        }
+
+        .test-item.failed {
+            border-left: 4px solid var(--danger-color);
+        }
+
+        .test-header {
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .test-header:hover {
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        .test-name {
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .test-duration {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.05);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .test-error {
+            background: rgba(239, 68, 68, 0.1);
+            border-top: 1px solid rgba(239, 68, 68, 0.2);
+            padding: 15px;
+            display: none;
+        }
+
+        .test-item.failed .test-error,
+        .test-item.expanded .test-error {
+            display: block;
+        }
+
+        .test-error pre {
+            margin: 0;
+            font-family: 'Cascadia Code', Consolas, monospace;
+            font-size: 0.85rem;
+            color: #fca5a5;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .nav-links {
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        .nav-links a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-size: 0.9rem;
+            margin: 0 10px;
+        }
+
+        .nav-links a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>⚡ Test Runner Interativo — Portal de Acesso</h1>
+            <button class="btn-run" onclick="window.runUnitTests()">
+                <span>🔄</span> Executar Testes
+            </button>
+        </header>
+
+        <div id="test-summary">
+            <!-- Summary stats injected here -->
+        </div>
+
+        <div class="test-list" id="test-results">
+            <!-- Test results injected here -->
+        </div>
+
+        <div class="nav-links">
+            <a href="../index.html">← Voltar para o Portal Principal</a>
+            <span>•</span>
+            <a href="../dashboard.html">Ir para o Dashboard</a>
+        </div>
+    </div>
+
+    <!-- Scripts da aplicação sob teste -->
+    <script src="../js/validators.js"></script>
+    <script src="../js/security.js"></script>
+    <script src="../js/cep-service.js"></script>
+    <script src="../js/auth-service.js"></script>
+    <!-- Suíte de testes -->
+    <script src="unit-tests.js"></script>
+</body>
+</html>

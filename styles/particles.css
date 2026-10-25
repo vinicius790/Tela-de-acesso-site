@@ -1,0 +1,65 @@
+/* Saiyan Cyberpunk Pure CSS Particle & Aura Effects */
+.particle-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(circle at center, #0f0c1b 0%, #050508 100%);
+}
+
+.energy-particle {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  background: #00f0ff;
+  box-shadow: 0 0 8px #00f0ff, 0 0 15px #9333ea;
+  border-radius: 50%;
+  animation: floatUp 8s linear infinite;
+  opacity: 0.6;
+}
+
+.energy-particle:nth-child(2n) {
+  background: #ffd700;
+  box-shadow: 0 0 8px #ffd700, 0 0 15px #ff4500;
+  animation-duration: 6s;
+  animation-delay: 1s;
+}
+
+.energy-particle:nth-child(3n) {
+  background: #9333ea;
+  box-shadow: 0 0 10px #9333ea;
+  animation-duration: 10s;
+  animation-delay: 2s;
+}
+
+@keyframes floatUp {
+  0% {
+    transform: translateY(105vh) translateX(0) scale(0.5);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.8;
+  }
+  80% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(-10vh) translateX(50px) scale(1.2);
+    opacity: 0;
+  }
+}
+
+/* Generate multiple particles via inline styles or simple loop in CSS */
+.energy-particle:nth-child(1) { left: 10%; animation-delay: 0s; }
+.energy-particle:nth-child(2) { left: 20%; animation-delay: 1.5s; }
+.energy-particle:nth-child(3) { left: 30%; animation-delay: 3s; }
+.energy-particle:nth-child(4) { left: 40%; animation-delay: 0.5s; }
+.energy-particle:nth-child(5) { left: 50%; animation-delay: 2s; }
+.energy-particle:nth-child(6) { left: 60%; animation-delay: 4s; }
+.energy-particle:nth-child(7) { left: 70%; animation-delay: 1s; }
+.energy-particle:nth-child(8) { left: 80%; animation-delay: 2.5s; }
+.energy-particle:nth-child(9) { left: 90%; animation-delay: 3.5s; }

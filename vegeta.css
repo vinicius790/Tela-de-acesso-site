@@ -1,0 +1,201 @@
+@charset "UTF-8";
+
+:root {
+  --bg-dark: #07070f;
+  --glass-bg: rgba(13, 13, 24, 0.75);
+  --glass-border: rgba(0, 240, 255, 0.25);
+  --neon-cyan: #00f0ff;
+  --neon-purple: #9333ea;
+  --neon-gold: #ffd700;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --error-color: #ff3366;
+  --success-color: #00ffcc;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background-color: var(--bg-dark);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-x: hidden;
+}
+
+.container {
+  width: 100%;
+  max-width: 520px;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+/* Dark Glassmorphism Login Box with Neon Gradient Border */
+.login-box {
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 40px 35px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 
+              0 0 30px rgba(0, 240, 255, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.login-box::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--neon-purple), var(--neon-cyan), var(--neon-gold));
+  animation: borderGlow 4s linear infinite;
+}
+
+@keyframes borderGlow {
+  0% { filter: hue-rotate(0deg); }
+  100% { filter: hue-rotate(360deg); }
+}
+
+.login-box h2 {
+  color: var(--text-primary);
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  margin-bottom: 35px;
+  text-align: center;
+  text-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+}
+
+/* Floating Inputs / Modern Form Controls */
+.form-group {
+  position: relative;
+  margin-bottom: 25px;
+}
+
+.form-group label {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-bottom: 8px;
+  display: block;
+  transition: color 0.3s ease;
+}
+
+.form-control {
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-primary);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 12px 16px;
+  height: auto;
+  font-size: 1rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.form-control:focus {
+  background: rgba(0, 240, 255, 0.05);
+  color: var(--text-primary);
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.3), inset 0 0 5px rgba(0, 240, 255, 0.1);
+  outline: none;
+}
+
+/* Energy Hover Button Effect */
+.btn-primary {
+  background: linear-gradient(135deg, var(--neon-purple), var(--neon-cyan));
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-weight: 600;
+  font-size: 1.05rem;
+  letter-spacing: 1px;
+  padding: 14px;
+  width: 100%;
+  margin-top: 10px;
+  box-shadow: 0 4px 15px rgba(147, 51, 234, 0.4);
+  transition: all 0.4s ease;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.btn-primary::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: rgba(255, 255, 255, 0.15);
+  transform: rotate(45deg) translateY(-100%);
+  transition: transform 0.6s ease;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+  box-shadow: 0 0 25px var(--neon-cyan), 0 0 40px var(--neon-purple);
+  transform: translateY(-2px);
+}
+
+.btn-primary:hover::after {
+  transform: rotate(45deg) translateY(100%);
+}
+
+#message {
+  margin-top: 20px;
+  text-align: center;
+  font-weight: 500;
+}
+
+/* SweetAlert2 Cyberpunk Customization */
+.swal2-popup {
+  background: rgba(10, 10, 18, 0.95) !important;
+  backdrop-filter: blur(20px) !important;
+  border: 1px solid var(--neon-cyan) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 0 30px rgba(0, 240, 255, 0.4) !important;
+  color: var(--text-primary) !important;
+  font-size: 1.2rem !important;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+}
+
+.swal2-title {
+  color: var(--text-primary) !important;
+  text-shadow: 0 0 10px rgba(0, 240, 255, 0.6);
+}
+
+.swal2-html-container {
+  color: var(--text-secondary) !important;
+}
+
+.swal2-styled.swal2-confirm {
+  background: linear-gradient(135deg, var(--neon-purple), var(--neon-cyan)) !important;
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.4) !important;
+  border-radius: 8px !important;
+  font-weight: 600 !important;
+}
+
+.swal2-styled.swal2-confirm:hover {
+  box-shadow: 0 0 25px var(--neon-cyan) !important;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 576px) {
+  .container {
+    padding: 10px;
+  }
+  .login-box {
+    padding: 25px 20px;
+    border-radius: 12px;
+  }
+  .login-box h2 {
+    font-size: 1.5rem;
+    margin-bottom: 25px;
+  }
+}
