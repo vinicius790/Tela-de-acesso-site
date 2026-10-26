@@ -74,7 +74,7 @@ Através do [`js/auth-service.js`](js/auth-service.js), o portal intercepta cham
 
 ## 📊 Painel do Usuário (Dashboard & Analytics)
 
-Após o login bem-sucedido, o usuário é direcionado para [`dashboard.html`](dashboard.html):
+Após o login bem-sucedido, o usuário é direcionado para [`index/dashboard.html`](index/dashboard.html):
 * Proteção de rota ativa (redireciona automaticamente ao login caso o token não esteja presente).
 * Exibição de dados mascarados do usuário autenticado e avatar dinâmico com sua inicial.
 * Gráficos interativos em Canvas nativo para acessos e score de conformidade.
@@ -107,22 +107,32 @@ Através de [`js/theme-engine.js`](js/theme-engine.js), o usuário pode alternar
 * **Super Saiyan Mode**: Efeito temático com partículas de Ki douradas/azuis em CSS puro, bordas pulsantes em amarelo saiyan e iluminação neon.
 * Preferência mantida automaticamente no `localStorage`.
 
+### 🌌 Simulador de Treino & Scouter da Capsule Corp ([`index/goku.html`](index/goku.html))
+Desenvolvido com tecnologia Dr. Briefs e estilização Dark Glassmorphism (`styles/capsule-corp.css`):
+1. **Scouter de Nível de Poder Saiyajin**: Radar circular interativo com varredura 360°, miras dinâmicas, bips de telemetria em **Web Audio API** e alerta de sobrecarga/vidro trincado quando o poder de luta ultrapassa **9.000** (*"IT'S OVER 9000!"*).
+2. **Câmara Gravitacional (1G a 500G)**: Slider interativo com multiplicador de peso corporal, cálculo de estamina, ganho progressivo de Battle Power (BP) e vibração sub-bass sintetizada.
+3. **Maleta de Cápsulas Hoi-Poi**: Cápsulas clicáveis interativas (Veículo No. 9, Domo Residencial No. 1, Droid de Treino No. 42 e Sementes dos Deuses No. 7) que se descompactam com animações de explosão de partículas via HTML5 Canvas.
+
 ---
 
 ## 📂 Estrutura do Repositório
 
 ```text
 Tela-de-acesso-site/
-├── index.html                  # Portal principal com abas de login e cadastro
-├── goku.html                   # Modo clássico (Dragon Ball style) com correção de vínculos
-├── dashboard.html              # Painel do usuário pós-autenticação com gráficos e QR Code
+├── index.html                  # Loader e redirecionador moderno imediato para index/index.html
 ├── manifest.json               # Manifesto PWA para instalação no dispositivo
-├── sw.js                       # Service Worker para cache e suporte offline
-├── vegeta.css                  # Folha de estilos Dark Glassmorphism
-├── script.js                   # Controlador principal da interface
+├── sw.js                       # Service Worker na raiz para cache e suporte offline
+├── index/
+│   ├── index.html              # Portal principal com abas de login e cadastro
+│   ├── dashboard.html          # Painel do usuário pós-autenticação com gráficos e QR Code
+│   └── goku.html               # Simulador de Treino & Scouter da Capsule Corp (Tecnologia Dr. Briefs)
 ├── styles/
-│   └── particles.css           # Partículas cósmicas e efeito de aura em CSS puro
+│   ├── vegeta.css              # Folha de estilos Dark Glassmorphism
+│   ├── particles.css           # Partículas cósmicas e efeito de aura em CSS puro
+│   └── capsule-corp.css        # HUD do Scouter Saiyajin, câmara gravitacional e maleta Hoi-Poi
 ├── js/
+│   ├── script.js               # Controlador principal da interface
+│   ├── capsule-simulator.js    # Engine de síntese Web Audio, radar de Ki, física 500G e cápsulas
 │   ├── auth-service.js         # Backend simulado, SHA-256 e geração de JWT
 │   ├── cep-service.js          # Integração resiliente com ViaCEP e BrasilAPI
 │   ├── dashboard.js            # Lógica de proteção de rota e logout do dashboard
@@ -131,7 +141,8 @@ Tela-de-acesso-site/
 │   ├── notifications.js        # Wrapper SweetAlert2 e sistema leve de toasts
 │   ├── security.js             # Sanitização XSS e mitigação de força bruta
 │   ├── theme-engine.js         # Gerenciador de temas (Executive vs Super Saiyan)
-│   └── validators.js           # Algoritmo de CPF, máscaras e força de senha
+│   ├── validators.js           # Algoritmo de CPF, máscaras e força de senha
+│   └── sw.js                   # Service Worker espelhado
 ├── tests/
 │   ├── index.html              # Test runner visual interativo no navegador
 │   └── unit-tests.js           # Bateria de testes unitários automatizados

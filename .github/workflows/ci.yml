@@ -30,13 +30,21 @@ jobs:
       - name: Verify static files and structure
         run: |
           echo "Verifying project structure..."
-          test -f goku.html
-          test -f vegeta.css
-          test -f script.js
+          test -f index.html
+          test -f manifest.json
+          test -f index/index.html
+          test -f index/goku.html
+          test -f index/dashboard.html
+          test -f styles/vegeta.css
+          test -f styles/particles.css
+          test -f styles/capsule-corp.css
           test -d js
+          test -f js/script.js
+          test -f js/capsule-simulator.js
           test -f js/validators.js
           test -f js/security.js
           test -f js/notifications.js
+          test -f tests/index.html
           echo "All core files verified successfully."
 
   deploy:

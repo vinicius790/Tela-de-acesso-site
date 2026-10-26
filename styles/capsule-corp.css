@@ -1,0 +1,912 @@
+/* ==========================================================================
+   CAPSULE CORP TRAINING SIMULATOR & SCOUTER HUD STYLES
+   Dr. Briefs Gravitational & Scouter Tech - Capsule Corp R&D Division
+   Consistent with styles/vegeta.css & styles/particles.css
+   ========================================================================== */
+
+:root {
+  --cc-bg-dark: #070712;
+  --cc-glass: rgba(13, 17, 30, 0.82);
+  --cc-glass-card: rgba(18, 24, 42, 0.75);
+  --cc-border-cyan: rgba(0, 240, 255, 0.3);
+  --cc-border-glow: 0 0 20px rgba(0, 240, 255, 0.25);
+  --cc-cyan: #00f0ff;
+  --cc-purple: #9333ea;
+  --cc-gold: #ffd700;
+  --cc-red: #ff0055;
+  --cc-green: #00ff88;
+  --cc-text-main: #f8fafc;
+  --cc-text-muted: #94a3b8;
+  --scouter-green: #00ff77;
+  --scouter-green-glow: rgba(0, 255, 119, 0.4);
+  --scouter-lens-bg: rgba(0, 35, 15, 0.65);
+}
+
+/* Page Reset & Core Background */
+body.capsule-corp-theme {
+  margin: 0;
+  padding: 0;
+  background-color: var(--cc-bg-dark);
+  background-image: 
+    radial-gradient(circle at 50% 0%, rgba(147, 51, 234, 0.18) 0%, transparent 50%),
+    radial-gradient(circle at 85% 90%, rgba(0, 240, 255, 0.12) 0%, transparent 45%),
+    radial-gradient(circle at 15% 75%, rgba(255, 215, 0, 0.08) 0%, transparent 40%),
+    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 100% 100%, 40px 40px, 40px 40px;
+  color: var(--cc-text-main);
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* CRT Scanlines Overlay */
+.crt-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 999;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+  background-size: 100% 4px;
+  opacity: 0.35;
+}
+
+/* Capsule Corp Navbar */
+.cc-navbar {
+  background: rgba(10, 14, 26, 0.88);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--cc-border-cyan);
+  padding: 12px 24px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 4px 25px rgba(0, 0, 0, 0.6);
+}
+
+.cc-brand-badge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cc-logo-svg {
+  width: 44px;
+  height: 44px;
+  filter: drop-shadow(0 0 10px rgba(0, 240, 255, 0.6));
+  animation: logoPulse 4s ease-in-out infinite alternate;
+}
+
+@keyframes logoPulse {
+  0% { transform: scale(1); filter: drop-shadow(0 0 8px rgba(0, 240, 255, 0.5)); }
+  100% { transform: scale(1.04); filter: drop-shadow(0 0 16px rgba(147, 51, 234, 0.8)); }
+}
+
+.cc-brand-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: 2px;
+  margin: 0;
+  background: linear-gradient(90deg, #fff, var(--cc-cyan), var(--cc-purple));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-transform: uppercase;
+}
+
+.cc-brand-sub {
+  font-size: 0.72rem;
+  letter-spacing: 1.5px;
+  color: var(--cc-text-muted);
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.cc-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.cc-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: none !important;
+  color: #f1f5f9;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  transition: all 0.25s ease;
+  cursor: pointer;
+}
+
+.cc-nav-btn:hover {
+  background: rgba(0, 240, 255, 0.15);
+  border-color: var(--cc-cyan);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 240, 255, 0.3);
+}
+
+.cc-nav-btn.active {
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.25), rgba(147, 51, 234, 0.25));
+  border-color: var(--cc-cyan);
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.3);
+}
+
+/* Main Dashboard Grid */
+.cc-simulator-container {
+  max-width: 1400px;
+  margin: 25px auto 40px auto;
+  padding: 0 20px;
+}
+
+/* Glassmorphic Tactical Cards */
+.cc-card {
+  background: var(--cc-glass);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--cc-border-cyan);
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.7), var(--cc-border-glow);
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.cc-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--cc-purple), var(--cc-cyan), var(--cc-gold));
+}
+
+.cc-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 14px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.cc-card-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #fff;
+  text-shadow: 0 0 12px rgba(0, 240, 255, 0.4);
+}
+
+.cc-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: rgba(0, 240, 255, 0.12);
+  color: var(--cc-cyan);
+  border: 1px solid rgba(0, 240, 255, 0.3);
+}
+
+.cc-badge.red {
+  background: rgba(255, 0, 85, 0.15);
+  color: #ff3366;
+  border-color: rgba(255, 0, 85, 0.4);
+}
+
+.cc-badge.green {
+  background: rgba(0, 255, 136, 0.15);
+  color: #00ff88;
+  border-color: rgba(0, 255, 136, 0.4);
+}
+
+/* ==========================================================================
+   MODULE A: SAIYAN POWER LEVEL SCOUTER HUD
+   ========================================================================== */
+.scouter-viewport {
+  position: relative;
+  background: var(--scouter-lens-bg);
+  border: 2px solid var(--scouter-green);
+  border-radius: 18px;
+  padding: 22px;
+  box-shadow: inset 0 0 40px rgba(0, 255, 119, 0.15), 0 0 25px rgba(0, 255, 119, 0.25);
+  overflow: hidden;
+  min-height: 480px;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s ease;
+}
+
+.scouter-viewport.overheat-danger {
+  border-color: var(--cc-red) !important;
+  box-shadow: inset 0 0 50px rgba(255, 0, 85, 0.35), 0 0 35px rgba(255, 0, 85, 0.6) !important;
+  animation: scouterGlitchAlert 0.15s infinite alternate;
+}
+
+@keyframes scouterGlitchAlert {
+  0% { transform: translate(0, 0); filter: hue-rotate(0deg); }
+  50% { transform: translate(-2px, 1px); }
+  100% { transform: translate(2px, -1px); filter: hue-rotate(15deg); }
+}
+
+/* Scouter Curved Eyepiece Aesthetic Accents */
+.scouter-visor-frame {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.75rem;
+  color: var(--scouter-green);
+  opacity: 0.8;
+  letter-spacing: 1px;
+}
+
+.scouter-corner-bracket {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-color: var(--scouter-green);
+  pointer-events: none;
+}
+.scouter-corner-bracket.tl { top: 8px; left: 8px; border-top: 2px solid; border-left: 2px solid; }
+.scouter-corner-bracket.tr { top: 8px; right: 8px; border-top: 2px solid; border-right: 2px solid; }
+.scouter-corner-bracket.bl { bottom: 8px; left: 8px; border-bottom: 2px solid; border-left: 2px solid; }
+.scouter-corner-bracket.br { bottom: 8px; right: 8px; border-bottom: 2px solid; border-right: 2px solid; }
+
+/* Radar & Target Display Area */
+.scouter-hud-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  z-index: 2;
+  width: 100%;
+}
+
+.radar-canvas-container {
+  position: relative;
+  width: 260px;
+  height: 260px;
+  margin: 10px auto;
+}
+
+#scouterRadarCanvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border-radius: 50%;
+  border: 1px dashed rgba(0, 255, 119, 0.4);
+  box-shadow: 0 0 20px rgba(0, 255, 119, 0.2);
+}
+
+/* Target Reticle Overlay */
+.target-reticle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 90px;
+  height: 90px;
+  border: 1px dashed var(--scouter-green);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: reticleSpin 12s linear infinite;
+  transition: all 0.3s ease;
+}
+
+@keyframes reticleSpin {
+  0% { transform: translate(-50%, -50%) rotate(0deg); }
+  100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+.target-reticle.locked {
+  border-color: #ff3366;
+  box-shadow: 0 0 18px rgba(255, 0, 85, 0.8);
+  animation: reticleSpin 3s linear infinite;
+}
+
+/* Digital Power Level LED Readout */
+.scouter-bp-display {
+  background: rgba(0, 20, 10, 0.85);
+  border: 1px solid var(--scouter-green);
+  border-radius: 12px;
+  padding: 14px 22px;
+  margin-top: 15px;
+  text-align: center;
+  width: 100%;
+  max-width: 380px;
+  box-shadow: 0 0 15px rgba(0, 255, 119, 0.2);
+  transition: all 0.3s ease;
+}
+
+.scouter-bp-label {
+  font-size: 0.75rem;
+  letter-spacing: 2px;
+  color: var(--scouter-green);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.scouter-bp-value {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 2.6rem;
+  font-weight: 900;
+  color: #39ff14;
+  text-shadow: 0 0 18px #39ff14, 0 0 30px rgba(57, 255, 20, 0.6);
+  letter-spacing: 4px;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.scouter-bp-tier {
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: #fff;
+  margin-top: 4px;
+}
+
+/* Cracked Scouter Glass Overlay */
+.scouter-cracked-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10;
+  display: none;
+  background: radial-gradient(circle at center, rgba(255, 0, 55, 0.15) 0%, transparent 80%);
+}
+
+.scouter-cracked-overlay.active {
+  display: block;
+}
+
+.scouter-cracked-overlay svg {
+  width: 100%;
+  height: 100%;
+  stroke: #ff2255;
+  stroke-width: 2.5;
+  filter: drop-shadow(0 0 8px #ff0055);
+}
+
+/* Over 9000 Alert Banner */
+.over-9000-banner {
+  display: none;
+  margin-top: 15px;
+  padding: 12px 18px;
+  background: linear-gradient(90deg, rgba(255, 0, 85, 0.3), rgba(255, 51, 0, 0.4), rgba(255, 0, 85, 0.3));
+  border: 1px solid #ff0055;
+  border-radius: 8px;
+  color: #fff;
+  text-align: center;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  font-size: 0.95rem;
+  animation: bannerPulse 0.4s infinite alternate;
+  box-shadow: 0 0 25px rgba(255, 0, 85, 0.6);
+  z-index: 15;
+}
+
+.over-9000-banner.show {
+  display: block;
+}
+
+@keyframes bannerPulse {
+  0% { transform: scale(1); filter: brightness(1); }
+  100% { transform: scale(1.02); filter: brightness(1.3); }
+}
+
+/* Target Selector Bar */
+.target-selector-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 15px 0 10px 0;
+  justify-content: center;
+}
+
+.target-chip {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #e2e8f0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.target-chip:hover {
+  background: rgba(0, 255, 119, 0.2);
+  border-color: var(--scouter-green);
+  color: #fff;
+  transform: translateY(-2px);
+}
+
+.target-chip.active {
+  background: var(--scouter-green);
+  color: #000;
+  font-weight: 700;
+  box-shadow: 0 0 15px var(--scouter-green-glow);
+  border-color: #fff;
+}
+
+/* ==========================================================================
+   MODULE B: GRAVITY CHAMBER TRAINER
+   ========================================================================== */
+.gravity-chamber-box {
+  position: relative;
+  border-radius: 14px;
+  background: rgba(10, 15, 28, 0.7);
+  padding: 22px;
+  border: 1px solid rgba(0, 240, 255, 0.2);
+  overflow: hidden;
+  transition: all 0.4s ease;
+}
+
+.gravity-chamber-box.training-active {
+  border-color: var(--cc-purple);
+  box-shadow: inset 0 0 50px rgba(147, 51, 234, 0.3), 0 0 35px rgba(147, 51, 234, 0.4);
+  animation: gravityRumble 0.12s infinite alternate;
+}
+
+@keyframes gravityRumble {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(1.5px); }
+}
+
+/* Gravitational Distortion Waves Overlay */
+.gravity-waves-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(ellipse at center, rgba(147, 51, 234, 0.35) 0%, transparent 75%);
+  transition: opacity 0.5s ease;
+  z-index: 1;
+}
+
+.gravity-chamber-box.training-active .gravity-waves-overlay {
+  opacity: 1;
+  animation: gravityWavePulse 1.8s ease-in-out infinite alternate;
+}
+
+@keyframes gravityWavePulse {
+  0% { transform: scale(0.98); opacity: 0.3; }
+  100% { transform: scale(1.05); opacity: 0.7; }
+}
+
+/* Slider Custom Styling */
+.gravity-slider-wrapper {
+  position: relative;
+  margin: 25px 0 15px 0;
+}
+
+.gravity-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 12px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #00f0ff 0%, #ffd700 50%, #ff0055 100%);
+  outline: none;
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+  cursor: pointer;
+}
+
+.gravity-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid var(--cc-cyan);
+  box-shadow: 0 0 15px var(--cc-cyan), inset 0 0 6px rgba(0,0,0,0.5);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.gravity-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.25);
+  box-shadow: 0 0 25px #00f0ff;
+}
+
+/* Gravity Stats Metric Grid */
+.gravity-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 14px;
+  margin: 20px 0;
+  position: relative;
+  z-index: 2;
+}
+
+.gravity-metric-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 12px 14px;
+  text-align: center;
+  transition: border-color 0.25s ease;
+}
+
+.gravity-metric-card:hover {
+  border-color: var(--cc-cyan);
+}
+
+.gravity-metric-label {
+  font-size: 0.72rem;
+  letter-spacing: 1px;
+  color: var(--cc-text-muted);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.gravity-metric-val {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+.gravity-metric-val.g-force {
+  color: var(--cc-gold);
+  text-shadow: 0 0 12px rgba(255, 215, 0, 0.5);
+}
+
+.gravity-metric-val.bp-growth {
+  color: var(--cc-cyan);
+  text-shadow: 0 0 12px rgba(0, 240, 255, 0.5);
+}
+
+/* Stamina Bar */
+.stamina-container {
+  margin: 20px 0 15px 0;
+  position: relative;
+  z-index: 2;
+}
+
+.stamina-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.stamina-bar-track {
+  height: 14px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.stamina-bar-fill {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #00ff88, #22c55e);
+  border-radius: 7px;
+  box-shadow: 0 0 12px #00ff88;
+  transition: width 0.3s ease, background 0.4s ease;
+}
+
+.stamina-bar-fill.warning {
+  background: linear-gradient(90deg, #ffd700, #f59e0b);
+  box-shadow: 0 0 12px #ffd700;
+}
+
+.stamina-bar-fill.critical {
+  background: linear-gradient(90deg, #ff0055, #ef4444);
+  box-shadow: 0 0 18px #ff0055;
+  animation: criticalPulse 0.4s infinite alternate;
+}
+
+@keyframes criticalPulse {
+  0% { opacity: 0.6; }
+  100% { opacity: 1; }
+}
+
+/* ==========================================================================
+   MODULE C: HOI-POI CAPSULE INVENTORY
+   ========================================================================== */
+.capsule-inventory-case {
+  background: rgba(15, 20, 36, 0.85);
+  border: 1px solid rgba(0, 240, 255, 0.25);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.7);
+}
+
+.capsules-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 18px;
+}
+
+/* Individual Hoi-Poi Capsule Item */
+.hoi-poi-capsule-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  padding: 20px 16px;
+  text-align: center;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  overflow: hidden;
+}
+
+.hoi-poi-capsule-card:hover {
+  transform: translateY(-6px);
+  border-color: var(--cc-cyan);
+  box-shadow: 0 12px 25px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 240, 255, 0.25);
+}
+
+.hoi-poi-capsule-card.unpacked {
+  border-color: var(--cc-gold);
+  background: rgba(255, 215, 0, 0.05);
+  box-shadow: 0 0 25px rgba(255, 215, 0, 0.2);
+}
+
+/* Realistic Dragon Ball Capsule Graphic */
+.capsule-cylinder-graphic {
+  width: 50px;
+  height: 100px;
+  margin: 0 auto 15px auto;
+  position: relative;
+  border-radius: 25px;
+  box-shadow: 0 8px 18px rgba(0,0,0,0.6);
+  transition: transform 0.3s ease;
+}
+
+.hoi-poi-capsule-card:hover .capsule-cylinder-graphic {
+  transform: scale(1.1) rotate(-4deg);
+}
+
+/* Capsule Top Cap (Silver / Chrome) */
+.capsule-top {
+  width: 100%;
+  height: 48%;
+  border-top-left-radius: 25px;
+  border-top-right-radius: 25px;
+  position: relative;
+  background: linear-gradient(135deg, #e2e8f0 0%, #94a3b8 50%, #475569 100%);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.capsule-release-button {
+  width: 14px;
+  height: 14px;
+  background: #dc2626;
+  border-radius: 50%;
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.6), 0 0 6px #dc2626;
+}
+
+/* Capsule Middle Band */
+.capsule-middle-band {
+  width: 100%;
+  height: 4%;
+  background: #1e293b;
+  border-top: 1px solid rgba(0,0,0,0.8);
+  border-bottom: 1px solid rgba(255,255,255,0.2);
+}
+
+/* Capsule Bottom Body (Colored with Number) */
+.capsule-bottom {
+  width: 100%;
+  height: 48%;
+  border-bottom-left-radius: 25px;
+  border-bottom-right-radius: 25px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 1.1rem;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Color Schemes for Specific Capsules */
+.capsule-card-vehicle .capsule-bottom {
+  background: linear-gradient(135deg, #00f0ff 0%, #0284c7 100%);
+}
+.capsule-card-house .capsule-bottom {
+  background: linear-gradient(135deg, #ffd700 0%, #d97706 100%);
+}
+.capsule-card-droid .capsule-bottom {
+  background: linear-gradient(135deg, #a855f7 0%, #7e22ce 100%);
+}
+.capsule-card-senzu .capsule-bottom {
+  background: linear-gradient(135deg, #22c55e 0%, #15803d 100%);
+}
+
+.capsule-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 4px;
+}
+
+.capsule-desc {
+  font-size: 0.78rem;
+  color: var(--cc-text-muted);
+  margin-bottom: 14px;
+  min-height: 38px;
+}
+
+/* Unpacked State Content */
+.unpacked-entity-view {
+  display: none;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px dashed rgba(255, 215, 0, 0.4);
+  border-radius: 10px;
+  padding: 12px;
+  margin-top: 10px;
+  animation: fadeInZoom 0.4s ease forwards;
+}
+
+.hoi-poi-capsule-card.unpacked .unpacked-entity-view {
+  display: block;
+}
+
+.hoi-poi-capsule-card.unpacked .capsule-cylinder-graphic {
+  display: none;
+}
+
+@keyframes fadeInZoom {
+  0% { opacity: 0; transform: scale(0.7); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+.unpacked-icon-svg {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 10px auto;
+  filter: drop-shadow(0 0 10px rgba(0, 240, 255, 0.7));
+}
+
+/* Capsule Action Buttons */
+.capsule-action-btn {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  margin-top: 6px;
+}
+
+.capsule-action-btn.unpack {
+  background: linear-gradient(135deg, var(--cc-cyan), var(--cc-purple));
+  color: #fff;
+}
+.capsule-action-btn.unpack:hover {
+  filter: brightness(1.2);
+  box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
+}
+
+.capsule-action-btn.interact {
+  background: linear-gradient(135deg, var(--cc-gold), #f59e0b);
+  color: #000;
+}
+.capsule-action-btn.interact:hover {
+  filter: brightness(1.15);
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+}
+
+.capsule-action-btn.pack {
+  background: rgba(255, 255, 255, 0.1);
+  color: #e2e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+.capsule-action-btn.pack:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Particle Canvas Overlay for Capsule Explosions */
+#capsuleParticleCanvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 998;
+}
+
+/* Golden Super Saiyan Ki Flash Overlay */
+.ki-burst-flash {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: radial-gradient(circle at center, rgba(255, 215, 0, 0.8) 0%, rgba(255, 100, 0, 0.4) 60%, transparent 100%);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 1000;
+  transition: opacity 0.1s ease;
+}
+
+.ki-burst-flash.ignite {
+  opacity: 1;
+  animation: kiFadeOut 1s ease forwards;
+}
+
+@keyframes kiFadeOut {
+  0% { opacity: 0.9; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.1); }
+}
+
+/* Responsive Styles */
+@media (max-width: 992px) {
+  .cc-simulator-container {
+    padding: 0 12px;
+  }
+  .radar-canvas-container {
+    width: 220px;
+    height: 220px;
+  }
+  .scouter-bp-value {
+    font-size: 2.1rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .cc-navbar {
+    padding: 10px 14px;
+  }
+  .cc-brand-title {
+    font-size: 0.95rem;
+  }
+  .cc-nav-btn {
+    padding: 6px 12px;
+    font-size: 0.78rem;
+  }
+  .scouter-viewport {
+    min-height: 420px;
+  }
+}
