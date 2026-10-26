@@ -3,27 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Test Runner Interativo — Portal de Acesso</title>
+    <title>⚡ Test Runner Interativo & Validador de Arquitetura — Portal de Acesso</title>
     <link rel="stylesheet" href="../vegeta.css">
+    <link rel="stylesheet" href="../styles/particles.css">
     <style>
         :root {
-            --bg-color: #0f172a;
-            --card-bg: #1e293b;
+            --bg-color: #0b0f19;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --card-border: rgba(255, 255, 255, 0.1);
             --text-color: #f8fafc;
             --text-muted: #94a3b8;
-            --border-color: #334155;
-            --success-color: #22c55e;
+            --success-color: #10b981;
             --danger-color: #ef4444;
+            --warning-color: #f59e0b;
             --primary-color: #3b82f6;
             --primary-hover: #2563eb;
+            --accent-glow: rgba(59, 130, 246, 0.25);
+        }
+
+        * {
+            box-sizing: border-box;
         }
 
         body {
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
             background-color: var(--bg-color);
+            background-image: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #0b0f19 75%);
             color: var(--text-color);
             margin: 0;
-            padding: 24px;
+            padding: 30px 20px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -32,107 +40,273 @@
 
         .container {
             width: 100%;
-            max-width: 900px;
+            max-width: 960px;
         }
 
         header {
             display: flex;
+            flex-wrap: wrap;
             justify-content: space-between;
             align-items: center;
+            gap: 15px;
             margin-bottom: 25px;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 15px;
+            border-bottom: 1px solid var(--card-border);
+            padding-bottom: 20px;
         }
 
-        h1 {
-            font-size: 1.5rem;
+        .header-title-box h1 {
+            font-size: 1.65rem;
+            margin: 0 0 6px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: linear-gradient(135deg, #fff 30%, #93c5fd 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-subtitle {
+            font-size: 0.88rem;
+            color: var(--text-muted);
             margin: 0;
-            color: var(--text-color);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
         }
 
         .btn-run {
-            background-color: var(--primary-color);
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
             color: white;
-            border: none;
-            padding: 10px 20px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 10px 22px;
             border-radius: 8px;
             font-size: 0.95rem;
             font-weight: 600;
             cursor: pointer;
-            transition: background-color 0.2s, transform 0.1s;
+            box-shadow: 0 4px 14px var(--accent-glow);
+            transition: all 0.2s ease;
             display: flex;
             align-items: center;
             gap: 8px;
         }
 
         .btn-run:hover {
-            background-color: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+            filter: brightness(1.1);
         }
 
+        /* Summary Card */
         .summary-card {
-            background-color: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 20px;
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
+            padding: 24px;
             margin-bottom: 25px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+            transition: border-color 0.3s ease;
         }
 
         .summary-card.success {
-            border-left: 5px solid var(--success-color);
+            border-left: 6px solid var(--success-color);
         }
 
         .summary-card.has-failures {
-            border-left: 5px solid var(--danger-color);
+            border-left: 6px solid var(--danger-color);
         }
 
-        .summary-card h3 {
-            margin-top: 0;
-            margin-bottom: 15px;
-            font-size: 1.1rem;
+        .summary-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .summary-header h3 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .coverage-badge {
+            background: rgba(59, 130, 246, 0.15);
+            color: #93c5fd;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .progress-bar {
+            height: 100%;
+            transition: width 0.4s ease;
         }
 
         .summary-stats {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-            gap: 15px;
+            grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
+            gap: 12px;
         }
 
         .stat-item {
             background: rgba(255, 255, 255, 0.03);
-            padding: 12px;
-            border-radius: 8px;
+            padding: 14px 10px;
+            border-radius: 10px;
             text-align: center;
             border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
         .stat-label {
             display: block;
-            font-size: 0.8rem;
+            font-size: 0.78rem;
             color: var(--text-muted);
-            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
         }
 
         .stat-value {
-            font-size: 1.25rem;
-            font-weight: bold;
+            font-size: 1.45rem;
+            font-weight: 700;
         }
 
         .text-success { color: var(--success-color); }
         .text-danger { color: var(--danger-color); }
+        .text-warning { color: var(--warning-color); }
+        .text-muted { color: var(--text-muted); }
 
-        .test-list {
+        /* Controls & Filter toolbar */
+        .controls-toolbar {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
             display: flex;
             flex-direction: column;
+            gap: 14px;
+        }
+
+        .toolbar-row {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
             gap: 12px;
         }
 
-        .test-item {
-            background-color: var(--card-bg);
-            border: 1px solid var(--border-color);
+        .search-box {
+            position: relative;
+            flex: 1;
+            min-width: 240px;
+        }
+
+        .search-input {
+            width: 100%;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--card-border);
             border-radius: 8px;
-            overflow: hidden;
+            color: var(--text-color);
+            padding: 8px 14px 8px 36px;
+            font-size: 0.9rem;
+            outline: none;
             transition: border-color 0.2s;
+        }
+
+        .search-input:focus {
+            border-color: var(--primary-color);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            pointer-events: none;
+        }
+
+        .status-filters {
+            display: flex;
+            gap: 6px;
+        }
+
+        .btn-filter {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-muted);
+            border: 1px solid var(--card-border);
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 0.82rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-filter.active, .btn-filter:hover {
+            background: rgba(59, 130, 246, 0.2);
+            color: #fff;
+            border-color: var(--primary-color);
+        }
+
+        .category-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .filter-chip {
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--text-muted);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            padding: 4px 10px;
+            border-radius: 14px;
+            font-size: 0.78rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .filter-chip.active, .filter-chip:hover {
+            background: rgba(59, 130, 246, 0.25);
+            color: #93c5fd;
+            border-color: var(--primary-color);
+        }
+
+        /* Test List */
+        .test-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .test-item {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 10px;
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+
+        .test-item:hover {
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
 
         .test-item.passed {
@@ -144,16 +318,17 @@
         }
 
         .test-header {
-            padding: 14px 18px;
+            padding: 12px 18px;
             display: flex;
             align-items: center;
             justify-content: space-between;
             cursor: pointer;
             user-select: none;
+            gap: 10px;
         }
 
         .test-header:hover {
-            background-color: rgba(255, 255, 255, 0.02);
+            background: rgba(255, 255, 255, 0.02);
         }
 
         .test-name {
@@ -161,20 +336,49 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            flex-wrap: wrap;
+            font-size: 0.92rem;
+        }
+
+        .status-icon {
+            font-size: 1.05rem;
+        }
+
+        .test-number {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            font-family: monospace;
+        }
+
+        .category-badge {
+            background: rgba(255, 255, 255, 0.06);
+            color: #cbd5e1;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.74rem;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .title-text {
+            color: #f1f5f9;
         }
 
         .test-duration {
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             color: var(--text-muted);
-            background: rgba(255, 255, 255, 0.05);
-            padding: 2px 8px;
-            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.04);
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-family: monospace;
+            white-space: nowrap;
         }
 
         .test-error {
-            background: rgba(239, 68, 68, 0.1);
+            background: rgba(239, 68, 68, 0.08);
             border-top: 1px solid rgba(239, 68, 68, 0.2);
-            padding: 15px;
+            padding: 16px;
             display: none;
         }
 
@@ -185,26 +389,66 @@
 
         .test-error pre {
             margin: 0;
-            font-family: 'Cascadia Code', Consolas, monospace;
-            font-size: 0.85rem;
+            font-family: 'Cascadia Code', Consolas, Monaco, monospace;
+            font-size: 0.82rem;
             color: #fca5a5;
             white-space: pre-wrap;
             word-break: break-all;
+            line-height: 1.5;
+        }
+
+        .running-indicator {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-muted);
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .no-tests-msg {
+            text-align: center;
+            padding: 30px;
+            color: var(--text-muted);
+            background: var(--card-bg);
+            border-radius: 8px;
+            border: 1px dashed var(--card-border);
         }
 
         .nav-links {
-            margin-top: 30px;
+            margin-top: 35px;
             text-align: center;
+            padding-top: 20px;
+            border-top: 1px solid var(--card-border);
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            font-size: 0.9rem;
         }
 
         .nav-links a {
-            color: var(--primary-color);
+            color: #60a5fa;
             text-decoration: none;
-            font-size: 0.9rem;
-            margin: 0 10px;
+            transition: color 0.2s;
         }
 
         .nav-links a:hover {
+            color: #93c5fd;
             text-decoration: underline;
         }
     </style>
@@ -212,33 +456,79 @@
 <body>
     <div class="container">
         <header>
-            <h1>⚡ Test Runner Interativo — Portal de Acesso</h1>
-            <button class="btn-run" onclick="window.runUnitTests()">
-                <span>🔄</span> Executar Testes
-            </button>
+            <div class="header-title-box">
+                <h1>⚡ Test Runner & Architecture Validator</h1>
+                <p class="header-subtitle">Bateria de Testes Automatizados Nativa — Portal de Acesso v2.0</p>
+            </div>
+            <div class="header-actions">
+                <button class="btn-run" onclick="window.runUnitTests()">
+                    <span>🔄</span> Executar Testes
+                </button>
+            </div>
         </header>
 
+        <!-- Summary & Stats Section -->
         <div id="test-summary">
-            <!-- Summary stats injected here -->
+            <!-- Dynamic summary cards injected by runner -->
         </div>
 
+        <!-- Filter & Search Toolbar -->
+        <div class="controls-toolbar">
+            <div class="toolbar-row">
+                <div class="search-box">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" class="search-input" id="search-input" 
+                           placeholder="Pesquisar testes por nome ou módulo..." 
+                           oninput="window.testRunnerInstance.setSearchQuery(this.value)">
+                </div>
+                <div class="status-filters">
+                    <button class="btn-filter active" onclick="setStatusFilter(this, 'all')">Todos</button>
+                    <button class="btn-filter" onclick="setStatusFilter(this, 'passed')">Passaram</button>
+                    <button class="btn-filter" onclick="setStatusFilter(this, 'failed')">Falharam</button>
+                </div>
+            </div>
+            <!-- Category Chips -->
+            <div class="category-filters" id="category-filters">
+                <!-- Injected dynamically by TestRunner -->
+            </div>
+        </div>
+
+        <!-- Test Results Container -->
         <div class="test-list" id="test-results">
-            <!-- Test results injected here -->
+            <!-- Test cards injected here -->
         </div>
 
+        <!-- Navigation Footer -->
         <div class="nav-links">
-            <a href="../index.html">← Voltar para o Portal Principal</a>
-            <span>•</span>
-            <a href="../dashboard.html">Ir para o Dashboard</a>
+            <a href="../index.html">← Retornar ao Portal Principal</a>
+            <span style="color: var(--card-border)">•</span>
+            <a href="../index/forgot-password.html">Recuperação de Senha</a>
+            <span style="color: var(--card-border)">•</span>
+            <a href="../dashboard.html">Painel de Métricas (Dashboard)</a>
+            <span style="color: var(--card-border)">•</span>
+            <a href="../goku.html">Modo Clássico (DBZ)</a>
         </div>
     </div>
 
-    <!-- Scripts da aplicação sob teste -->
+    <script>
+        function setStatusFilter(button, status) {
+            document.querySelectorAll('.status-filters .btn-filter').forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+            if (window.testRunnerInstance) {
+                window.testRunnerInstance.setStatusFilter(status);
+            }
+        }
+    </script>
+
+    <!-- Application scripts under test -->
     <script src="../js/validators.js"></script>
     <script src="../js/security.js"></script>
     <script src="../js/cep-service.js"></script>
     <script src="../js/auth-service.js"></script>
-    <!-- Suíte de testes -->
+    <script src="../js/password-recovery.js"></script>
+    <script src="../js/dashboard-charts.js"></script>
+    <script src="../js/export-service.js"></script>
+    <!-- Comprehensive unit test suite -->
     <script src="unit-tests.js"></script>
 </body>
 </html>

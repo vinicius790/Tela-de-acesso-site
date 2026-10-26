@@ -5,7 +5,7 @@
  * - Fallback cascade: BrasilAPI -> ViaCEP -> Local cache
  * - Offline-safe (never breaks the form if network fails)
  */
-(function() {
+(function(window) {
     'use strict';
 
     class CepService {
@@ -14,9 +14,44 @@
             this.debounceTimer = null;
         }
 
+        validateCep(rawCep) {
+            const clean = String(rawCep || '').replace(/\D/g, '');
+            return clean.length === 8;
+        }
+
+        normalizeViaCep(data, cleanCep) {
+            if (!data || data.erro) return null;
+            return {
+                cep: cleanCep,
+                street: data.logradouro || '',
+                neighborhood: data.bairro || '',
+                city: data.localidade || '',
+                state: data.uf || ''
+            };
+        }
+
+        normalizeBrasilApi(data, cleanCep) {
+            if (!data) return null;
+            return {
+                cep: cleanCep,
+                street: data.street || '',
+                neighborhood: data.neighborhood || '',
+                city: data.city || '',
+                state: data.state || ''
+            };
+        }
+
+        setCache(cleanCep, addressData) {
+            this.cache.set(cleanCep, addressData);
+        }
+
+        clearCache() {
+            this.cache.clear();
+        }
+
         async fetchAddress(rawCep) {
             const cep = (rawCep || '').replace(/\D/g, '');
-            if (cep.length !== 8) {
+            if (!this.validateCep(cep)) {
                 return { success: false, error: 'CEP deve ter 8 dígitos.' };
             }
 
@@ -31,14 +66,8 @@
                     headers: { 'Accept': 'application/json' }
                 });
                 if (response.ok) {
-                    const data = await response.json();
-                    const result = {
-                        cep: cep,
-                        street: data.street || '',
-                        neighborhood: data.neighborhood || '',
-                        city: data.city || '',
-                        state: data.state || ''
-                    };
+                    const raw = await response.json();
+                    const result = this.normalizeBrasilApi(raw, cep);
                     this.cache.set(cep, result);
                     return { success: true, data: result, provider: 'BrasilAPI' };
                 }
@@ -50,15 +79,9 @@
             try {
                 const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
                 if (response.ok) {
-                    const data = await response.json();
-                    if (!data.erro) {
-                        const result = {
-                            cep: cep,
-                            street: data.logradouro || '',
-                            neighborhood: data.bairro || '',
-                            city: data.localidade || '',
-                            state: data.uf || ''
-                        };
+                    const raw = await response.json();
+                    if (!raw.erro) {
+                        const result = this.normalizeViaCep(raw, cep);
                         this.cache.set(cep, result);
                         return { success: true, data: result, provider: 'ViaCEP' };
                     }
@@ -93,5 +116,7 @@
         }
     }
 
-    window.cepService = new CepService();
-})();
+    const cepService = new CepService();
+    window.CepService = CepService;
+    window.cepService = cepService;
+})(typeof window !== 'undefined' ? window : this);

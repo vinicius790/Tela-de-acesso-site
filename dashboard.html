@@ -436,7 +436,7 @@
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.bundle.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
 
-    <!-- Módulos da Aplicação -->
+    <!-- Módulos da Aplicação (Caminhos relativos para js/) -->
     <script src="js/validators.js" defer></script>
     <script src="js/security.js" defer></script>
     <script src="js/theme-engine.js" defer></script>
@@ -473,8 +473,42 @@
           <button id="btnOpenDrawer" class="btn btn-outline-light btn-sm px-3 mr-2 font-weight-bold">
             <i class="fas fa-user-circle mr-1 text-warning"></i> Meu Perfil
           </button>
-          <button id="btnExportData" class="btn btn-outline-info btn-sm px-3 mr-2 font-weight-bold" onclick="window.exportService.exportSessionReport()">
-            <i class="fas fa-file-download mr-1"></i> Auditoria (JSON)
+          <a href="goku.html" class="btn btn-outline-success btn-sm px-3 mr-2 font-weight-bold" title="Abrir Simulador Capsule Corp">
+            <i class="fas fa-atom mr-1"></i> Capsule Corp
+          </a>
+          <!-- Dropdown Multi-Format Export & Compliance (Blob API) -->
+          <div class="dropdown d-inline-block mr-2" id="exportDropdownGroup">
+            <button class="btn btn-outline-info btn-sm px-3 font-weight-bold dropdown-toggle" type="button" id="dropdownExportReports" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+              <i class="fas fa-file-export mr-1"></i> Exportar Dados (Blob API)
+            </button>
+            <div class="dropdown-menu dropdown-menu-right bg-dark border-secondary shadow-lg py-2" aria-labelledby="dropdownExportReports" style="min-width: 290px;">
+              <h6 class="dropdown-header text-muted font-weight-bold" style="font-size: 0.72rem; text-transform: uppercase;">
+                <i class="fas fa-shield-alt text-warning mr-1"></i> Auditoria & Portabilidade (LGPD/GDPR)
+              </h6>
+              <a class="dropdown-item text-white py-2" href="javascript:void(0)" id="btnExportJsonAudit" onclick="window.exportService.exportJSON()">
+                <i class="fas fa-file-code text-info mr-2"></i> Relatório de Auditoria (JSON)
+              </a>
+              <a class="dropdown-item text-white py-2" href="javascript:void(0)" id="btnExportCsvActivity" onclick="window.exportService.exportCSV()">
+                <i class="fas fa-file-csv text-success mr-2"></i> Planilha de Atividades (CSV com BOM)
+              </a>
+              <a class="dropdown-item text-white py-2" href="javascript:void(0)" id="btnPrintExecutiveReport" onclick="window.exportService.printAuditReport()">
+                <i class="fas fa-print text-warning mr-2"></i> Relatório Executivo (Imprimir / PDF)
+              </a>
+              <div class="dropdown-divider border-secondary my-1"></div>
+              <h6 class="dropdown-header text-muted font-weight-bold" style="font-size: 0.72rem; text-transform: uppercase;">
+                <i class="fas fa-qrcode text-danger mr-1"></i> Autenticação em 2 Etapas (TOTP)
+              </h6>
+              <a class="dropdown-item text-white py-2" href="javascript:void(0)" id="btnExportTotpQrSvg" onclick="window.exportService.exportQRCodeSVG()">
+                <i class="fas fa-vector-square text-danger mr-2"></i> Baixar QR Code 2FA (Vetor SVG)
+              </a>
+            </div>
+          </div>
+
+          <button id="btnExportData" class="btn btn-outline-info btn-sm px-3 mr-2 font-weight-bold d-none d-md-inline-block" onclick="window.exportService.exportJSON()" title="Download rápido do relatório de auditoria JSON">
+            <i class="fas fa-file-download mr-1"></i> JSON
+          </button>
+          <button id="btnPrintReportQuick" class="btn btn-outline-warning btn-sm px-3 mr-2 font-weight-bold d-none d-md-inline-block" onclick="window.exportService.printAuditReport()" title="Abrir para impressão ou salvar como PDF">
+            <i class="fas fa-print mr-1"></i> Imprimir / PDF
           </button>
           <button id="logout-btn" class="btn btn-outline-danger btn-sm px-3 font-weight-bold">
             <i class="fas fa-sign-out-alt mr-1"></i> Sair
@@ -680,6 +714,19 @@
                 </div>
               </div>
             </div>
+
+            <!-- Medidor de Saúde do Servidor & Cluster (Radial Gauge Speedometer) -->
+            <div class="chart-container-box mt-3">
+              <div class="d-flex justify-content-between align-items-center flex-wrap mb-2">
+                <h6 class="mb-2 mb-md-0"><i class="fas fa-tachometer-alt text-success mr-2"></i>Saúde do Servidor & Cluster (Telemetria)</h6>
+                <div class="btn-group btn-group-sm" role="group" id="gauge-metric-selectors">
+                  <button type="button" class="btn btn-outline-danger btn-sm active" data-metric="cpu"><i class="fas fa-microchip mr-1"></i> CPU</button>
+                  <button type="button" class="btn btn-outline-danger btn-sm" data-metric="memory"><i class="fas fa-memory mr-1"></i> Memória</button>
+                  <button type="button" class="btn btn-outline-danger btn-sm" data-metric="latency"><i class="fas fa-network-wired mr-1"></i> Latência</button>
+                </div>
+              </div>
+              <canvas id="clusterHealthCanvas" height="225" style="width: 100%; height: 225px; display: block; margin: 0 auto;"></canvas>
+            </div>
           </div>
         </div>
 
@@ -722,7 +769,7 @@
 
       <!-- Links de Rodapé e Navegação -->
       <div class="mt-3 text-center pb-4">
-        <a href="index/index.html" class="text-muted small mr-3"><i class="fas fa-arrow-left mr-1"></i>Voltar ao Login Principal</a>
+        <a href="index.html" class="text-muted small mr-3"><i class="fas fa-arrow-left mr-1"></i>Voltar ao Login Principal</a>
         <span class="text-secondary">•</span>
         <a href="tests/index.html" class="text-muted small ml-3 mr-3"><i class="fas fa-vial mr-1 text-info"></i>Executar Suíte de Testes Unitários</a>
         <span class="text-secondary">•</span>
@@ -979,6 +1026,46 @@
       </div>
     </div>
 
+    <!-- MODAL LEGADO: Edição de Perfil do Próprio Usuário (mantido para compatibilidade) -->
+    <div class="modal fade" id="editProfileModal" tabindex="-1" role="dialog" aria-labelledby="editProfileModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content bg-dark text-white border-secondary">
+          <div class="modal-header border-secondary">
+            <h5 class="modal-title font-weight-bold" id="editProfileModalLabel"><i class="fas fa-user-cog mr-2 text-warning"></i>Editar Meu Perfil</h5>
+            <button type="button" class="close text-white" data-dismiss="modal" aria-label="Fechar">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <form id="formEditProfile" onsubmit="return false;">
+              <div class="form-group text-left">
+                <label for="edit-name"><i class="fas fa-user mr-2 text-muted"></i>Nome de Usuário</label>
+                <input type="text" class="form-control bg-secondary text-white border-0" id="edit-name" required />
+              </div>
+              <div class="form-group text-left">
+                <label for="edit-email"><i class="fas fa-envelope mr-2 text-muted"></i>E-mail</label>
+                <input type="email" class="form-control bg-secondary text-white border-0" id="edit-email" required />
+              </div>
+              <div class="form-group text-left">
+                <label for="edit-phone"><i class="fas fa-phone mr-2 text-muted"></i>Telefone Celular</label>
+                <input type="text" class="form-control bg-secondary text-white border-0" id="edit-phone" placeholder="(11) 99999-9999" maxlength="15" />
+              </div>
+              <div class="form-group text-left">
+                <label for="edit-cpf"><i class="fas fa-id-card mr-2 text-muted"></i>CPF (Protegido)</label>
+                <input type="text" class="form-control bg-dark text-muted border-secondary" id="edit-cpf" disabled readonly />
+              </div>
+            </form>
+          </div>
+          <div class="modal-footer border-secondary">
+            <button type="button" class="btn btn-outline-light btn-sm" data-dismiss="modal">Cancelar</button>
+            <button type="button" class="btn btn-primary btn-sm font-weight-bold" id="btnSaveProfile">
+              <i class="fas fa-save mr-1"></i> Salvar Alterações
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Canvas oculto para Crop circular de Avatar -->
     <canvas id="avatarCropCanvas" width="160" height="160" style="display:none;"></canvas>
 
@@ -986,7 +1073,7 @@
       window.addEventListener('DOMContentLoaded', () => {
         const qrContainer = document.getElementById('qrCodeContainer');
         if (qrContainer && window.exportService) {
-          window.exportService.renderMockQrCode(qrContainer);
+          window.exportService.renderQRCode(qrContainer);
         }
       });
     </script>

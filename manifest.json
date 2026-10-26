@@ -1,16 +1,73 @@
 {
-  "name": "Portal de Acesso Seguro",
+  "name": "Portal de Acesso Seguro & Enterprise Auth",
   "short_name": "Portal Acesso",
-  "description": "Sistema de Autenticação Segura com Validação de CPF e Painel do Usuário",
+  "description": "Plataforma Enterprise de Autenticação Segura, Validação Estrita de Documentos (CPF/CNPJ), Web Crypto SHA-256, Analytics em Canvas e Resiliência Offline",
   "start_url": "./index.html",
+  "scope": "./",
+  "id": "access-portal-v2",
+  "version": "2.0.0",
   "display": "standalone",
-  "background_color": "#0F172A",
-  "theme_color": "#FF0043",
+  "orientation": "portrait-primary",
+  "background_color": "#0B0F19",
+  "theme_color": "#3B82F6",
+  "categories": [
+    "security",
+    "productivity",
+    "utilities",
+    "business"
+  ],
+  "lang": "pt-BR",
+  "dir": "ltr",
   "icons": [
     {
       "src": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSJU32uQwa0-Q_i3LmbsIf-CPQXghW1K2MQLg&usqp=CAU",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSJU32uQwa0-Q_i3LmbsIf-CPQXghW1K2MQLg&usqp=CAU",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Acessar Portal",
+      "short_name": "Login",
+      "description": "Autenticar no Portal Corporativo",
+      "url": "./index.html",
+      "icons": [
+        {
+          "src": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSJU32uQwa0-Q_i3LmbsIf-CPQXghW1K2MQLg&usqp=CAU",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Painel de Controle",
+      "short_name": "Dashboard",
+      "description": "Métricas de Acesso e Indicadores de Segurança",
+      "url": "./dashboard.html",
+      "icons": [
+        {
+          "src": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSJU32uQwa0-Q_i3LmbsIf-CPQXghW1K2MQLg&usqp=CAU",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Suíte de Testes",
+      "short_name": "Testes",
+      "description": "Executar Test Runner Automatizado Interativo",
+      "url": "./tests/index.html",
+      "icons": [
+        {
+          "src": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSJU32uQwa0-Q_i3LmbsIf-CPQXghW1K2MQLg&usqp=CAU",
+          "sizes": "192x192"
+        }
+      ]
     }
   ]
 }

@@ -294,14 +294,18 @@
     // Máscara dinâmica de CPF
     const cpfInput = document.getElementById('reg-cpf');
     if (cpfInput) {
-      cpfInput.addEventListener('input', (e) => {
-        let v = e.target.value.replace(/\D/g, '');
-        if (v.length > 11) v = v.substring(0, 11);
-        v = v.replace(/(\d{3})(\d)/, '$1.$2');
-        v = v.replace(/(\d{3})(\d)/, '$1.$2');
-        v = v.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
-        e.target.value = v;
-      });
+      if (window.Validators && typeof window.Validators.bindMask === 'function') {
+        window.Validators.bindMask(cpfInput, 'cpf');
+      } else {
+        cpfInput.addEventListener('input', (e) => {
+          let v = e.target.value.replace(/\D/g, '');
+          if (v.length > 11) v = v.substring(0, 11);
+          v = v.replace(/(\d{3})(\d)/, '$1.$2');
+          v = v.replace(/(\d{3})(\d)/, '$1.$2');
+          v = v.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+          e.target.value = v;
+        });
+      }
     }
 
     // Integração automática de CEP (ViaCEP / BrasilAPI)
