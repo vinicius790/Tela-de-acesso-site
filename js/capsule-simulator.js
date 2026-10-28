@@ -472,6 +472,166 @@
   }
 
   /* ==========================================================================
+     1.55 RELATIVISTIC PHYSICS & GENERAL RELATIVITY ENGINE
+     ========================================================================== */
+  class RelativisticPhysicsEngine {
+    static get C() { return 299792458; } // Speed of light in m/s
+    static get G() { return 6.67430e-11; } // Universal gravitational constant m^3 kg^-1 s^-2
+    static get G0() { return 9.80665; } // Earth gravity acceleration m/s^2
+    static get CHAMBER_RADIUS() { return 5.0; } // Chamber radius in meters
+
+    /**
+     * Calculates effective mass required to generate g-force at chamber radius:
+     * g = G * M / R^2 => M_eff = g * R^2 / G
+     */
+    static calculateEffectiveMass(gForce = 1.0, radius = 5.0) {
+      const gAcc = Math.max(1, gForce) * this.G0;
+      return (gAcc * radius * radius) / this.G;
+    }
+
+    /**
+     * Calculates Schwarzschild Radius for equivalent mass:
+     * r_s = 2 * G * M / c^2 = 2 * g * R^2 / c^2
+     */
+    static calculateSchwarzschildRadius(gForce = 1.0, radius = 5.0) {
+      const M = this.calculateEffectiveMass(gForce, radius);
+      return (2 * this.G * M) / (this.C * this.C);
+    }
+
+    /**
+     * Calculates Gravitational Time Dilation factor:
+     * tau = dt * sqrt(1 - 2GM / (r * c^2)) = dt * sqrt(1 - r_s / r)
+     */
+    static calculateTimeDilationFactor(gForce = 1.0, radius = 5.0) {
+      const rs = this.calculateSchwarzschildRadius(gForce, radius);
+      const ratio = rs / radius;
+      if (ratio >= 1.0) return 0; // Beyond event horizon
+      return Math.sqrt(1.0 - ratio);
+    }
+
+    /**
+     * Calculates Lorentz Factor gamma = 1 / sqrt(1 - (v/c)^2)
+     */
+    static calculateLorentzFactor(vFractionOfC = 0.0) {
+      const beta = Math.max(0, Math.min(0.999999, Math.abs(vFractionOfC)));
+      return 1 / Math.sqrt(1 - beta * beta);
+    }
+
+    /**
+     * Returns comprehensive relativistic telemetry object
+     */
+    static getRelativisticTelemetry(gForce = 1.0, radius = 5.0) {
+      const effMass = this.calculateEffectiveMass(gForce, radius);
+      const rs = this.calculateSchwarzschildRadius(gForce, radius);
+      const dilationFactor = this.calculateTimeDilationFactor(gForce, radius);
+      const dilationPpm = (1 - dilationFactor) * 1e6; // parts per million
+      const isSingularityThreat = rs >= radius * 0.90;
+
+      return {
+        gForce,
+        radius,
+        effectiveMassKg: effMass,
+        schwarzschildRadiusMeters: rs,
+        dilationFactor,
+        dilationPpm,
+        chamberTimeRatio: `${(dilationFactor * 100).toFixed(6)}%`,
+        singularityMarginMeters: Math.max(0, radius - rs),
+        isSingularityThreat
+      };
+    }
+  }
+
+  // Alias on HighPrecisionPhysicsEngine
+  HighPrecisionPhysicsEngine.calculateEffectiveMass = RelativisticPhysicsEngine.calculateEffectiveMass.bind(RelativisticPhysicsEngine);
+  HighPrecisionPhysicsEngine.calculateSchwarzschildRadius = RelativisticPhysicsEngine.calculateSchwarzschildRadius.bind(RelativisticPhysicsEngine);
+  HighPrecisionPhysicsEngine.calculateTimeDilationFactor = RelativisticPhysicsEngine.calculateTimeDilationFactor.bind(RelativisticPhysicsEngine);
+  HighPrecisionPhysicsEngine.calculateLorentzFactor = RelativisticPhysicsEngine.calculateLorentzFactor.bind(RelativisticPhysicsEngine);
+  HighPrecisionPhysicsEngine.getRelativisticTelemetry = RelativisticPhysicsEngine.getRelativisticTelemetry.bind(RelativisticPhysicsEngine);
+
+  /* ==========================================================================
+     1.56 KI ENERGY FFT SPECTRUM ANALYZER
+     ========================================================================== */
+  class KiEnergySpectrumAnalyzer {
+    constructor(canvasId) {
+      this.canvas = typeof document !== 'undefined' ? document.getElementById(canvasId) : null;
+      this.ctx = this.canvas ? this.canvas.getContext('2d') : null;
+      this.bands = [
+        { name: 'Sub-Bass (Aura)', freq: '20-60Hz', color: '#ff1744', val: 0.2, peak: 0.2 },
+        { name: 'Bass (Núcleo)', freq: '60-250Hz', color: '#ff9100', val: 0.35, peak: 0.35 },
+        { name: 'Low-Mid (Carga)', freq: '250-500Hz', color: '#ffd600', val: 0.5, peak: 0.5 },
+        { name: 'Mid (Vocal Ki)', freq: '500-2kHz', color: '#00e676', val: 0.45, peak: 0.45 },
+        { name: 'High-Mid (Fissura)', freq: '2k-4kHz', color: '#00f0ff', val: 0.6, peak: 0.6 },
+        { name: 'Presence (Arcos)', freq: '4k-6kHz', color: '#2979ff', val: 0.4, peak: 0.4 },
+        { name: 'Brilliance (SSJ)', freq: '6k-12kHz', color: '#d500f9', val: 0.55, peak: 0.55 },
+        { name: 'Ultra-High (Divino)', freq: '12k-20kHz', color: '#ffffff', val: 0.3, peak: 0.3 }
+      ];
+      this.animationId = null;
+      this.phase = 0;
+    }
+
+    start() {
+      if (!this.canvas || !this.ctx) return;
+      const render = () => {
+        this.updateAndDraw();
+        this.animationId = requestAnimationFrame(render);
+      };
+      this.animationId = requestAnimationFrame(render);
+    }
+
+    stop() {
+      if (this.animationId) {
+        cancelAnimationFrame(this.animationId);
+        this.animationId = null;
+      }
+    }
+
+    updateAndDraw(powerMultiplier = 1.0, gForce = 1.0) {
+      if (!this.canvas || !this.ctx) return;
+      const ctx = this.ctx;
+      const w = this.canvas.width;
+      const h = this.canvas.height;
+      ctx.clearRect(0, 0, w, h);
+
+      this.phase += 0.08 * Math.sqrt(Math.max(1, gForce) / 10);
+      const numBands = this.bands.length;
+      const barSpacing = 4;
+      const barWidth = (w - (numBands + 1) * barSpacing) / numBands;
+
+      this.bands.forEach((band, idx) => {
+        const harmonic = Math.sin(this.phase * (idx + 1) * 0.4) * 0.25 + 0.5;
+        const noise = (Math.random() - 0.5) * 0.1;
+        const targetVal = Math.min(1.0, (harmonic + noise) * (0.6 + 0.4 * Math.min(3, powerMultiplier)));
+
+        band.val += (targetVal - band.val) * 0.2;
+        if (band.val > band.peak) {
+          band.peak = band.val;
+        } else {
+          band.peak = Math.max(band.val, band.peak - 0.008);
+        }
+
+        const barHeight = Math.max(4, band.val * (h - 18));
+        const x = barSpacing + idx * (barWidth + barSpacing);
+        const y = h - barHeight - 12;
+
+        const grad = ctx.createLinearGradient(0, y, 0, h);
+        grad.addColorStop(0, band.color);
+        grad.addColorStop(1, 'rgba(0, 240, 255, 0.15)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(x, y, barWidth, barHeight);
+
+        const peakY = h - Math.max(4, band.peak * (h - 18)) - 12;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(x, peakY, barWidth, 2);
+
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+        ctx.font = '8px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(band.freq.split('-')[0], x + barWidth / 2, h - 2);
+      });
+    }
+  }
+
+  /* ==========================================================================
      1.6 SAIYAN TRANSFORMATION MULTIPLIER ENGINE
      ========================================================================== */
   class SaiyanTransformationEngine {
@@ -1074,11 +1234,22 @@
         });
       }
 
+      // Initialize Ki Energy Spectrum Analyzer
+      const kiCanvas = document.getElementById('kiSpectrumCanvas');
+      if (kiCanvas) {
+        this.spectrumAnalyzer = new KiEnergySpectrumAnalyzer('kiSpectrumCanvas');
+        this.spectrumAnalyzer.start();
+      }
+
       this.updateTelemetry();
     }
 
     setGForce(g) {
       this.gForce = g;
+      if (this.spectrumAnalyzer) {
+        const mult = this.transformationEngine ? this.transformationEngine.currentForm.multiplier : 1;
+        this.spectrumAnalyzer.updateAndDraw(mult, this.gForce);
+      }
       this.updateTelemetry();
       if (this.isTraining) {
         this.audio.updateGravityHum(this.gForce, true);
@@ -1110,6 +1281,24 @@
       else if (this.gForce >= 500) equiv = 'Limite Divino (Boeing 737)';
 
       if (this.humanEquivDisplay) this.humanEquivDisplay.textContent = equiv;
+
+      // Relativistic General Relativity Telemetry updates
+      try {
+        const relTelemetry = RelativisticPhysicsEngine.getRelativisticTelemetry(this.gForce);
+        const timeDilationEl = document.getElementById('timeDilationText');
+        const rsEl = document.getElementById('schwarzschildRadiusText');
+        const singularityAlertEl = document.getElementById('singularityAlertBanner');
+
+        if (timeDilationEl) {
+          timeDilationEl.textContent = `${(relTelemetry.dilationFactor * 100).toFixed(4)}% (Δτ = ${relTelemetry.dilationFactor.toFixed(6)}s/s)`;
+        }
+        if (rsEl) {
+          rsEl.textContent = `${relTelemetry.schwarzschildRadiusMeters.toExponential(3)} m`;
+        }
+        if (singularityAlertEl) {
+          singularityAlertEl.style.display = relTelemetry.isSingularityThreat ? 'block' : 'none';
+        }
+      } catch (err) {}
     }
 
     startTraining() {
@@ -1170,6 +1359,10 @@
       this.sessionGainedBP += growthTick;
 
       this.updateStaminaUI();
+      if (this.spectrumAnalyzer) {
+        const mult = this.transformationEngine ? this.transformationEngine.currentForm.multiplier : 1;
+        this.spectrumAnalyzer.updateAndDraw(mult, this.gForce);
+      }
       this.updateTelemetry();
 
       // Check for Exhaustion Collapse
@@ -1432,6 +1625,8 @@
 
       // Expose for debugging & external integrations
       window.HighPrecisionPhysicsEngine = HighPrecisionPhysicsEngine;
+      window.RelativisticPhysicsEngine = RelativisticPhysicsEngine;
+      window.KiEnergySpectrumAnalyzer = KiEnergySpectrumAnalyzer;
       window.SaiyanTransformationEngine = SaiyanTransformationEngine;
       window.CapsuleCorp = {
         audio,
@@ -1440,7 +1635,9 @@
         gravity,
         inventory,
         transformationEngine,
-        HighPrecisionPhysicsEngine
+        HighPrecisionPhysicsEngine,
+        RelativisticPhysicsEngine,
+        KiEnergySpectrumAnalyzer
       };
     });
   }
@@ -1448,6 +1645,8 @@
   // Global window exposure for headless tests & unit runners
   if (typeof window !== 'undefined') {
     window.HighPrecisionPhysicsEngine = HighPrecisionPhysicsEngine;
+    window.RelativisticPhysicsEngine = RelativisticPhysicsEngine;
+    window.KiEnergySpectrumAnalyzer = KiEnergySpectrumAnalyzer;
     window.SaiyanTransformationEngine = SaiyanTransformationEngine;
   }
 
@@ -1455,6 +1654,8 @@
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
       HighPrecisionPhysicsEngine,
+      RelativisticPhysicsEngine,
+      KiEnergySpectrumAnalyzer,
       SaiyanTransformationEngine,
       CapsuleAudioEngine,
       ParticleSystem,

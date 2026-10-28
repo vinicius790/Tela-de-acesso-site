@@ -1376,6 +1376,67 @@
         assert.isTrue(ei > 0, 'Índice de fadiga deve ser calculado com sucesso');
     });
 
+    runner.add('Engenharia & Relatividade', 'RelativisticPhysicsEngine: Dilatação temporal gravitacional e horizonte de eventos de Schwarzschild', () => {
+        const rel = window.RelativisticPhysicsEngine || (window.CapsuleCorp && window.CapsuleCorp.RelativisticPhysicsEngine);
+        assert.isTrue(typeof rel === 'function' || typeof rel === 'object', 'RelativisticPhysicsEngine deve estar disponível');
+        
+        const mass1G = rel.calculateEffectiveMass(1, 5);
+        assert.isTrue(mass1G > 0, 'Massa efetiva para 1G deve ser positiva');
+        
+        const rs1G = rel.calculateSchwarzschildRadius(1, 5);
+        assert.isTrue(rs1G > 0, 'Raio de Schwarzschild deve ser positivo');
+        assert.isTrue(rs1G < 1e-10, 'Raio de Schwarzschild para 1G em raio de 5m deve ser infinitesimal');
+
+        const tau1G = rel.calculateTimeDilationFactor(1, 5);
+        assert.isTrue(tau1G > 0.999999, 'Fator de dilatação temporal para 1G deve ser extremamente próximo de 1.0');
+
+        const telemetry = rel.getRelativisticTelemetry(100, 5);
+        assert.equal(telemetry.gForce, 100, 'G-Force na telemetria deve ser 100');
+        assert.isFalse(telemetry.isSingularityThreat, '100G não deve ameaçar singularidade');
+    });
+
+    runner.add('Engenharia de Resiliência', 'ChaosMesh: Circuit Breaker State Machine & Transição CLOSED -> OPEN', async () => {
+        const chaos = window.ChaosMesh;
+        assert.isTrue(typeof chaos === 'object', 'ChaosMesh deve estar disponível');
+        
+        const breaker = chaos.createBreaker({ failureThreshold: 2, cooldownPeriodMs: 50 });
+        assert.equal(breaker.state, 'CLOSED', 'Estado inicial deve ser CLOSED');
+
+        let failCount = 0;
+        const failingTask = async () => { failCount++; throw new Error('Simulated network fault'); };
+
+        try { await breaker.execute(failingTask); } catch (e) {}
+        try { await breaker.execute(failingTask); } catch (e) {}
+
+        assert.equal(breaker.state, 'OPEN', 'Após 2 falhas consecutivas, circuito deve estar OPEN');
+        assert.isTrue(breaker.isOpen(), 'isOpen deve retornar true');
+    });
+
+    runner.add('Engenharia de Resiliência', 'ChaosMesh: FallbackStorage de memória transparente', () => {
+        const chaos = window.ChaosMesh;
+        const storage = new chaos.FallbackStorage();
+        storage.setItem('test_token', 'jwt_val_999');
+        assert.equal(storage.getItem('test_token'), 'jwt_val_999', 'Item salvo no storage deve ser recuperável');
+        storage.removeItem('test_token');
+        assert.isTrue(storage.getItem('test_token') === null, 'Item removido deve retornar null');
+    });
+
+    runner.add('Engenharia de Resiliência', 'ChaosMesh: Dead Letter Queue (DLQ) enfileiramento e reprocessamento', async () => {
+        const chaos = window.ChaosMesh;
+        const dlq = new chaos.DeadLetterQueue('test_dlq_unit', 10);
+        dlq.clear();
+        
+        const entry = dlq.enqueue({ event: 'USER_LOGIN_FAIL', user: 'agent_44' }, 'HTTP 503');
+        assert.isTrue(entry.id.startsWith('dlq_'), 'ID da mensagem DLQ deve ter prefixo correto');
+        assert.equal(dlq.size(), 1, 'DLQ deve conter 1 item');
+
+        const retryResult = await dlq.processQueue(async (payload) => {
+            assert.equal(payload.event, 'USER_LOGIN_FAIL', 'Payload enfileirado deve ser íntegro');
+        });
+        assert.equal(retryResult.processed, 1, 'Deve reprocessar com sucesso o item enfileirado');
+        assert.equal(dlq.size(), 0, 'DLQ deve estar vazio após processamento');
+    });
+
     // Public test runner triggers
     window.runUnitTests = () => runner.run();
 

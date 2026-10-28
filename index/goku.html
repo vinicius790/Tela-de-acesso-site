@@ -18,6 +18,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" />
 
     <!-- Estilos do Ecossistema Saiyan & Capsule Corp -->
+    <link rel="stylesheet" href="../style/design-tokens.css" />
     <link rel="stylesheet" href="../style/vegeta.css" />
     <link rel="stylesheet" href="../style/particles.css" />
     <link rel="stylesheet" href="../style/capsule-corp.css" />
@@ -27,7 +28,8 @@
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.bundle.min.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
 
-    <!-- Engine Especialista Capsule Corp -->
+    <!-- Engine Especialista Capsule Corp & Chaos Mesh -->
+    <script src="../js/chaos-mesh.js" defer></script>
     <script src="../js/capsule-simulator.js" defer></script>
   </head>
 
@@ -262,6 +264,34 @@
               <div class="text-center text-muted mb-3" style="font-size: 0.82rem;">
                 <i class="fas fa-info-circle mr-1 text-info"></i> Equivalência de Esforço Físico:
                 <b id="humanEquivText" class="text-white">Normal (Gravidade Terrestre)</b>
+              </div>
+
+              <!-- Telemetria Relativística & Singularidade Schwarzschild -->
+              <div class="gravity-metrics-grid" style="grid-template-columns: repeat(2, 1fr); margin-top: -6px; margin-bottom: 14px;">
+                <div class="gravity-metric-card" style="border-left: 3px solid #00f0ff;">
+                  <div class="gravity-metric-label">Dilatação Temporal Relativística (Δτ)</div>
+                  <div id="timeDilationText" class="gravity-metric-val" style="font-size: 1rem; color: #00f0ff; font-family: monospace;">100.0000% (Δτ = 1.000000s/s)</div>
+                </div>
+                <div class="gravity-metric-card" style="border-left: 3px solid #ffd700;">
+                  <div class="gravity-metric-label">Raio de Schwarzschild (rs)</div>
+                  <div id="schwarzschildRadiusText" class="gravity-metric-val" style="font-size: 1rem; color: #ffd700; font-family: monospace;">5.455e-26 m</div>
+                </div>
+              </div>
+
+              <!-- Alerta de Singularidade Gravitacional -->
+              <div id="singularityAlertBanner" class="alert alert-danger" style="display: none; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.5px;">
+                ⚠️ ALERTA DE MICRO-SINGULARIDADE RELATIVÍSTICA: O raio de Schwarzschild excede a margem de segurança da câmara gravitacional! Risco de colapso de horizonte de eventos!
+              </div>
+
+              <!-- Espectro de Frequência de Energia Ki (FFT 8 Bandas) -->
+              <div style="background: rgba(0, 0, 0, 0.45); border: 1px solid rgba(0, 240, 255, 0.2); border-radius: 8px; padding: 10px 14px; margin-bottom: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                  <span style="font-size: 0.72rem; letter-spacing: 1px; color: #00f0ff; text-transform: uppercase; font-weight: 700;">
+                    <i class="fas fa-wave-square mr-1"></i> Analisador Espectral de Energia Ki (FFT 8-Bandas Radix-2)
+                  </span>
+                  <span style="font-size: 0.68rem; color: #a1a1aa; font-family: monospace;">LIVE TELEMETRY // 60 FPS</span>
+                </div>
+                <canvas id="kiSpectrumCanvas" width="480" height="75" style="width: 100%; height: 75px; display: block; border-radius: 4px; background: rgba(5, 10, 20, 0.7);"></canvas>
               </div>
 
               <!-- Barra de Estamina & Dreno por Segundo -->
