@@ -38,10 +38,10 @@ O **Portal de Acesso Seguro & Enterprise Auth v2.0** é uma plataforma web clien
 ```mermaid
 flowchart TD
     subgraph UI["Camada de Interface (UI & Glassmorphism)"]
-        Index["index.html (Abas Login & Registro)"]
-        Dash["dashboard.html (Painel Analítico)"]
-        Tests["tests/index.html (Test Runner)"]
-        Goku["goku.html (Easter Egg Clássico)"]
+        Index["index/index.html (Abas Login & Registro)"]
+        Dash["index/dashboard.html (Painel Analítico)"]
+        Tests["index/tests.html (Test Runner)"]
+        Goku["index/goku.html (Simulador Capsule Corp)"]
     end
 
     subgraph Theme["Motor de Temas"]
@@ -207,7 +207,7 @@ Desenvolvido em [`js/dashboard-charts.js`](js/dashboard-charts.js) com renderiza
 
 ## 🧪 Bateria de Testes Automatizados (57 Asserções)
 
-O projeto possui um **Test Runner Interativo Nativo** em [`tests/index.html`](tests/index.html) e [`tests/unit-tests.js`](tests/unit-tests.js):
+O projeto possui um **Test Runner Interativo Nativo** em [`index/tests.html`](index/tests.html) e [`js/unit-tests.js`](js/unit-tests.js):
 
 | Módulo / Domínio de Teste | Quantidade | Status | Destaques de Cobertura |
 | :--- | :---: | :---: | :--- |
@@ -231,34 +231,35 @@ O projeto possui um **Test Runner Interativo Nativo** em [`tests/index.html`](te
 
 ```text
 Tela-de-acesso-site/
-├── index.html                  # Portal principal com abas de login, registro e recuperação
-├── dashboard.html              # Painel corporativo pós-autenticação com gráficos e métricas
-├── goku.html                   # Modo temático Dragon Ball clássico
-├── manifest.json               # Manifesto PWA 2.0 com suporte offline e atalhos
-├── sw.js                       # Service Worker v2 na raiz do repositório
-├── vegeta.css                  # Estilos globais Dark Glassmorphism
-├── script.js                   # Controlador da interface principal
-├── styles/
-│   ├── vegeta.css              # Cópia modularizada da folha de estilos
-│   └── particles.css           # Sistema de partículas cósmicas e aura em CSS puro
-├── js/
-│   ├── auth-service.js         # Backend simulado, Web Crypto SHA-256 e emissão de JWT
-│   ├── cep-service.js          # Resolução de endereço em cascata (BrasilAPI -> ViaCEP -> Cache)
-│   ├── dashboard.js            # Lógica de proteção de rotas, sessão e logout do dashboard
-│   ├── dashboard-charts.js     # Motor analítico em HTML5 Canvas puro (Linha, Donut, Gauge)
-│   ├── export-service.js       # Exportador multi-formato (JSON, CSV BOM, SVG QR Code, Print)
-│   ├── notifications.js        # Wrapper SweetAlert2 e toasts leves
-│   ├── password-recovery.js    # Fluxo completo de recuperação de senha por token
-│   ├── security.js             # Entropia Shannon, mitigação de dicionário, sanitização XSS e lockout
-│   ├── sw.js                   # Service Worker v2 (access-portal-v2)
-│   ├── theme-engine.js         # Gerenciador dinâmico de temas (Executive Dark vs Super Saiyan)
-│   └── validators.js           # Algoritmos módulo 11 de CPF/CNPJ, máscaras e validação RFC 5322
-├── tests/
-│   ├── index.html              # Runner interativo visual no navegador com filtros e busca
-│   └── unit-tests.js           # Bateria de 57 asserções automatizadas
+├── index/                       # Todos os arquivos HTML do projeto
+│   ├── index.html               # Portal principal com abas de login e registro
+│   ├── dashboard.html           # Painel corporativo pós-autenticação com gráficos e métricas
+│   ├── forgot-password.html     # Assistente de recuperação de senha por token
+│   ├── goku.html                # Modo temático Dragon Ball & Simulador Capsule Corp
+│   └── tests.html               # Runner interativo visual de testes automatizados
+├── js/                          # Todos os scripts JavaScript do ecossistema
+│   ├── auth-service.js          # Backend simulado, Web Crypto SHA-256 e emissão de JWT
+│   ├── capsule-simulator.js     # Simulador Hoi-Poi, gravidade e Scouter Dragon Ball
+│   ├── cep-service.js           # Resolução de endereço em cascata (BrasilAPI -> ViaCEP -> Cache)
+│   ├── dashboard.js             # Lógica de proteção de rotas, sessão e logout do dashboard
+│   ├── dashboard-charts.js      # Motor analítico em HTML5 Canvas puro (Linha, Donut, Gauge)
+│   ├── export-service.js        # Exportador multi-formato (JSON, CSV BOM, SVG QR Code, Print)
+│   ├── notifications.js         # Wrapper SweetAlert2 e toasts leves
+│   ├── password-recovery.js     # Fluxo completo de recuperação de senha por token
+│   ├── script.js                # Controlador da interface do portal de login
+│   ├── security.js              # Entropia Shannon, mitigação de dicionário, sanitização XSS e lockout
+│   ├── sw.js                    # Service Worker v2 (access-portal-v2)
+│   ├── theme-engine.js          # Gerenciador dinâmico de temas (Executive Dark vs Super Saiyan)
+│   ├── unit-tests.js            # Bateria de 57 asserções automatizadas
+│   └── validators.js            # Algoritmos módulo 11 de CPF/CNPJ, máscaras e validação RFC 5322
+├── style/                       # Folhas de estilo CSS
+│   ├── capsule-corp.css         # Estilos da Corporação Cápsula e HUD Scouter
+│   ├── particles.css            # Sistema de partículas cósmicas e aura em CSS puro
+│   └── vegeta.css               # Estilos globais Dark Glassmorphism
+├── manifest.json                # Manifesto PWA 2.0 com suporte offline e atalhos
 └── .github/
     └── workflows/
-        └── ci.yml              # Pipeline de Integração Contínua (CI) e deploy no GitHub Pages
+        └── ci.yml               # Pipeline de Integração Contínua (CI) e deploy no GitHub Pages
 ```
 
 ---
@@ -266,9 +267,9 @@ Tela-de-acesso-site/
 ## 🚀 Como Executar Localmente
 
 1. **Acesso Direto no Navegador**:
-   * Abra o arquivo `index.html` em qualquer navegador web moderno.
+   * Abra o arquivo `index/index.html` em qualquer navegador web moderno.
 2. **Executar a Bateria de Testes**:
-   * Abra `tests/index.html` no navegador. O test runner executará automaticamente as 57 asserções em tempo real.
+   * Abra `index/tests.html` no navegador. O test runner executará automaticamente as 57 asserções em tempo real.
 3. **Servidor HTTP Local (Opcional para Service Worker)**:
    ```bash
    # Utilizando Python 3
@@ -303,10 +304,10 @@ Tela-de-acesso-site/
 ```mermaid
 flowchart TD
     subgraph UI["User Interface Layer"]
-        Index["index.html (Login & Register Tabs)"]
-        Dash["dashboard.html (Analytics Dashboard)"]
-        Tests["tests/index.html (Unit Test Runner)"]
-        Goku["goku.html (Classic Dragon Ball Theme)"]
+        Index["index/index.html (Login & Register Tabs)"]
+        Dash["index/dashboard.html (Analytics Dashboard)"]
+        Tests["index/tests.html (Unit Test Runner)"]
+        Goku["index/goku.html (Capsule Corp Simulator)"]
     end
 
     subgraph ThemeEngine["Theme Engine"]
@@ -416,7 +417,7 @@ Located in [`js/security.js`](js/security.js):
 
 ## 🧪 Automated Unit Test Suite (57 Assertions)
 
-The interactive browser-based test runner is located in [`tests/index.html`](tests/index.html) and [`tests/unit-tests.js`](tests/unit-tests.js):
+The interactive browser-based test runner is located in [`index/tests.html`](index/tests.html) and [`js/unit-tests.js`](js/unit-tests.js):
 
 | Test Domain | Tests | Status | Scope |
 | :--- | :---: | :---: | :--- |
@@ -439,9 +440,9 @@ The interactive browser-based test runner is located in [`tests/index.html`](tes
 ## 🚀 Quickstart Guide
 
 1. **Direct In-Browser Access**:
-   * Open `index.html` in any modern web browser.
+   * Open `index/index.html` in any modern web browser.
 2. **Execute Unit Tests**:
-   * Open `tests/index.html` in your browser. All 57 assertions execute automatically with live timing and status badges.
+   * Open `index/tests.html` in your browser. All 57 assertions execute automatically with live timing and status badges.
 3. **Local HTTP Server (Recommended for PWA Service Worker)**:
    ```bash
    python -m http.server 8080

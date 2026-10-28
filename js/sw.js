@@ -10,14 +10,15 @@ const CACHE_NAME = 'access-portal-v2';
 // Core local application resources to cache immediately on install
 const CRITICAL_ASSETS = [
     './',
-    './index.html',
-    './dashboard.html',
-    './goku.html',
-    './vegeta.css',
+    './index/index.html',
+    './index/dashboard.html',
+    './index/goku.html',
+    './index/forgot-password.html',
+    './index/tests.html',
     './manifest.json',
-    './styles/vegeta.css',
-    './styles/particles.css',
-    './script.js',
+    './style/vegeta.css',
+    './style/particles.css',
+    './style/capsule-corp.css',
     './js/script.js',
     './js/validators.js',
     './js/security.js',
@@ -29,8 +30,8 @@ const CRITICAL_ASSETS = [
     './js/dashboard-charts.js',
     './js/password-recovery.js',
     './js/export-service.js',
-    './tests/index.html',
-    './tests/unit-tests.js'
+    './js/capsule-simulator.js',
+    './js/unit-tests.js'
 ];
 
 // Offline HTML fallback banner/template
@@ -147,7 +148,7 @@ self.addEventListener('fetch', (event) => {
                         return cachedResponse;
                     }
                     // Try index.html from cache
-                    const fallbackIndex = await caches.match('./index.html');
+                    const fallbackIndex = await caches.match('./index/index.html');
                     if (fallbackIndex) {
                         return fallbackIndex;
                     }

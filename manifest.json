@@ -2,7 +2,7 @@
   "name": "Portal de Acesso Seguro & Enterprise Auth",
   "short_name": "Portal Acesso",
   "description": "Plataforma Enterprise de Autenticação Segura, Validação Estrita de Documentos (CPF/CNPJ), Web Crypto SHA-256, Analytics em Canvas e Resiliência Offline",
-  "start_url": "./index.html",
+  "start_url": "./index/index.html",
   "scope": "./",
   "id": "access-portal-v2",
   "version": "2.0.0",
@@ -37,7 +37,7 @@
       "name": "Acessar Portal",
       "short_name": "Login",
       "description": "Autenticar no Portal Corporativo",
-      "url": "./index.html",
+      "url": "./index/index.html",
       "icons": [
         {
           "src": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSJU32uQwa0-Q_i3LmbsIf-CPQXghW1K2MQLg&usqp=CAU",
@@ -49,7 +49,7 @@
       "name": "Painel de Controle",
       "short_name": "Dashboard",
       "description": "Métricas de Acesso e Indicadores de Segurança",
-      "url": "./dashboard.html",
+      "url": "./index/dashboard.html",
       "icons": [
         {
           "src": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSJU32uQwa0-Q_i3LmbsIf-CPQXghW1K2MQLg&usqp=CAU",
@@ -61,7 +61,7 @@
       "name": "Suíte de Testes",
       "short_name": "Testes",
       "description": "Executar Test Runner Automatizado Interativo",
-      "url": "./tests/index.html",
+      "url": "./index/tests.html",
       "icons": [
         {
           "src": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSJU32uQwa0-Q_i3LmbsIf-CPQXghW1K2MQLg&usqp=CAU",
