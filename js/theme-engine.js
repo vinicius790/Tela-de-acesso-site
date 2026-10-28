@@ -924,21 +924,28 @@
     // ==========================================================================
     // CUSTOM CANVAS PARTICLE & LIGHTNING AURA PHYSICS ENGINE
     // ==========================================================================
-    const canvas = document.createElement('canvas');
-    canvas.id = 'dbz-aura-canvas';
-    document.body.appendChild(canvas);
-    const ctx = canvas.getContext('2d');
-
-    let currentTheme = localStorage.getItem(STORAGE_KEY) || THEMES.EXECUTIVE;
-    let width = window.innerWidth;
-    let height = window.innerHeight;
+    let canvas = null;
+    let ctx = null;
+    let width = (typeof window !== 'undefined' && window.innerWidth) || 800;
+    let height = (typeof window !== 'undefined' && window.innerHeight) || 600;
+    let currentTheme = (typeof localStorage !== 'undefined' && localStorage.getItem(STORAGE_KEY)) || THEMES.EXECUTIVE;
 
     function resizeCanvas() {
-        width = canvas.width = window.innerWidth;
-        height = canvas.height = window.innerHeight;
+        if (!canvas) return;
+        width = canvas.width = (typeof window !== 'undefined' && window.innerWidth) || 800;
+        height = canvas.height = (typeof window !== 'undefined' && window.innerHeight) || 600;
     }
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
+
+    if (typeof window !== 'undefined' && typeof document !== 'undefined' && document.body) {
+        canvas = document.createElement('canvas');
+        canvas.id = 'dbz-aura-canvas';
+        document.body.appendChild(canvas);
+        ctx = canvas.getContext ? canvas.getContext('2d') : null;
+        if (typeof window.addEventListener === 'function') {
+            window.addEventListener('resize', resizeCanvas);
+        }
+        resizeCanvas();
+    }
 
     // Particle Classes
     class ExecutiveParticle {
@@ -1223,6 +1230,7 @@
 
     let animationTime = 0;
     function animateParticles() {
+        if (!ctx || typeof requestAnimationFrame !== 'function') return;
         ctx.clearRect(0, 0, width, height);
         animationTime += 0.016;
 
@@ -1289,7 +1297,9 @@
 
         requestAnimationFrame(animateParticles);
     }
-    animateParticles();
+    if (typeof window !== 'undefined' && typeof document !== 'undefined' && document.body && ctx) {
+        animateParticles();
+    }
 
     // ==========================================================================
     // THEME TRANSFORMATION CONTROLLER & SHOCKWAVE TRIGGER

@@ -111,6 +111,16 @@
         return 'sha256_' + (hex + hex).substring(0, 64);
     }
 
+    function safeCompare(a, b) {
+        if (typeof a !== 'string' || typeof b !== 'string') return false;
+        let mismatch = a.length ^ b.length;
+        const maxLen = Math.max(a.length, b.length);
+        for (let i = 0; i < maxLen; i++) {
+            mismatch |= (i < a.length ? a.charCodeAt(i) : 0) ^ (i < b.length ? b.charCodeAt(i) : 0);
+        }
+        return mismatch === 0;
+    }
+
     /**
      * Verifies a plain text password against a stored user object with salt and legacy compatibility
      * @param {string} password
@@ -120,41 +130,52 @@
     async function verifyPassword(password, user) {
         if (!user || !user.password || !password) return false;
 
-        // 1. Primary check: User has unique cryptographic salt
+        // 1. Primary check: User has unique cryptographic salt (timing-safe)
         if (user.salt) {
             const computedWithSalt = await hashPassword(password, user.salt);
-            if (computedWithSalt === user.password) {
+            if (safeCompare(computedWithSalt, user.password)) {
                 return true;
             }
         }
 
         // 2. Legacy check: Default salt
         const computedWithDefault = await hashPassword(password, DEFAULT_SALT);
-        if (computedWithDefault === user.password) {
+        if (safeCompare(computedWithDefault, user.password)) {
             return true;
         }
 
         // 3. Legacy check: Original static salt '_salt_portal_2026'
         const computedWithOldSalt = await hashPassword(password, '_salt_portal_2026');
-        if (computedWithOldSalt === user.password) {
+        if (safeCompare(computedWithOldSalt, user.password)) {
             return true;
         }
 
         // 4. Raw fallback check
-        if (user.password === ('hash_' + Math.abs(password.length).toString(16))) {
+        if (safeCompare(user.password, 'hash_' + Math.abs(password.length).toString(16))) {
             return true;
         }
 
         return false;
     }
 
+    const JWT_DEFAULT_SECRET = 'saiyan_access_portal_jwt_secret_2026';
+
     /**
-     * Generates a signed-like mock JWT token (Header.Payload.Signature)
+     * Generates a signed JWT token (Header.Payload.Signature) with HMAC-SHA256
      * @param {Object} user
      * @param {number} [expiresInSeconds=86400] - Duration in seconds
      * @returns {string} JWT Token
      */
     function generateJwtToken(user, expiresInSeconds = 86400) {
+        const security = (typeof window !== 'undefined' && window.Security) || (typeof global !== 'undefined' && global.Security);
+        if (security && security.SecureJWT) {
+            return security.SecureJWT.sign({
+                sub: user.username,
+                email: user.email,
+                cpf: user.cpf
+            }, JWT_DEFAULT_SECRET, expiresInSeconds);
+        }
+
         const btoaFn = typeof btoa === 'function' ? btoa : (str) => Buffer.from(str, 'binary').toString('base64');
         const now = Math.floor(Date.now() / 1000);
         const header = btoaFn(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
@@ -176,12 +197,22 @@
      */
     function decodeJwtToken(token) {
         if (!token || typeof token !== 'string') return null;
+        const security = (typeof window !== 'undefined' && window.Security) || (typeof global !== 'undefined' && global.Security);
+        if (security && security.SecureJWT) {
+            const dec = security.SecureJWT.decode(token);
+            if (dec) return dec;
+        }
+
         const atobFn = typeof atob === 'function' ? atob : (str) => Buffer.from(str, 'base64').toString('binary');
         try {
             const parts = token.split('.');
             if (parts.length !== 3) return null;
-            const header = JSON.parse(atobFn(parts[0]));
-            const payload = JSON.parse(atobFn(parts[1]));
+            let b64H = parts[0].replace(/-/g, '+').replace(/_/g, '/');
+            while (b64H.length % 4) b64H += '=';
+            let b64P = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+            while (b64P.length % 4) b64P += '=';
+            const header = JSON.parse(atobFn(b64H));
+            const payload = JSON.parse(atobFn(b64P));
             const signature = parts[2];
             return { header, payload, signature };
         } catch (e) {
@@ -207,6 +238,18 @@
      * @returns {Object} { valid: boolean, expired: boolean, payload: object|null, reason?: string }
      */
     function verifyJwtToken(token) {
+        const security = (typeof window !== 'undefined' && window.Security) || (typeof global !== 'undefined' && global.Security);
+        if (security && security.SecureJWT) {
+            const res = security.SecureJWT.verify(token, JWT_DEFAULT_SECRET);
+            if (res.valid) {
+                return { valid: true, expired: false, payload: res.payload };
+            }
+            if (res.expired) {
+                return { valid: false, expired: true, payload: res.payload, reason: 'Token expirado' };
+            }
+            return { valid: false, expired: false, payload: null, reason: res.error || 'Token inválido' };
+        }
+
         const decoded = decodeJwtToken(token);
         if (!decoded) {
             return { valid: false, expired: false, payload: null, reason: 'Formato de token inválido' };

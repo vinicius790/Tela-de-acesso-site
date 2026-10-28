@@ -243,20 +243,21 @@
 
         animateGauge() {
             if (this.gaugeAnimId) cancelAnimationFrame(this.gaugeAnimId);
-            const startTime = performance.now();
-            const duration = 650;
             const metric = this.clusterMetrics[this.activeGaugeMetric];
-            const startVal = metric.currentVal;
             const targetVal = metric.targetVal;
+            let currentVal = metric.currentVal;
+            let velocity = 0;
+            const stiffness = 0.085;
+            const damping = 0.76;
 
-            const step = (now) => {
-                const elapsed = now - startTime;
-                const progress = Math.min(elapsed / duration, 1);
-                const eased = Easing.easeOutCubic(progress);
-                metric.currentVal = startVal + (targetVal - startVal) * eased;
+            const step = () => {
+                const force = (targetVal - currentVal) * stiffness;
+                velocity = velocity * damping + force;
+                currentVal += velocity;
+                metric.currentVal = currentVal;
                 this.renderClusterGauge();
 
-                if (progress < 1) {
+                if (Math.abs(targetVal - currentVal) > 0.05 || Math.abs(velocity) > 0.05) {
                     this.gaugeAnimId = requestAnimationFrame(step);
                 } else {
                     metric.currentVal = targetVal;
@@ -412,17 +413,31 @@
             if (this.hoveredAccessIndex >= 0 && this.hoveredAccessIndex < points.length) {
                 const p = points[this.hoveredAccessIndex];
 
-                // Vertical Crosshair Guide Line
+                // Dual Interactive Crosshair Guides (Vertical + Horizontal)
                 ctx.beginPath();
-                ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+                ctx.strokeStyle = 'rgba(255, 0, 67, 0.4)';
                 ctx.lineWidth = 1;
                 ctx.setLineDash([3, 3]);
+                // Vertical line
                 ctx.moveTo(p.x, padding.top);
                 ctx.lineTo(p.x, baselineY);
+                // Horizontal line
+                ctx.moveTo(padding.left, p.y);
+                ctx.lineTo(width - padding.right, p.y);
                 ctx.stroke();
                 ctx.setLineDash([]);
 
-                // Pulsing ring
+                // Dynamic Y-Axis Value Badge Pill
+                ctx.fillStyle = '#FF0043';
+                drawRoundRect(ctx, padding.left - 38, p.y - 10, 32, 20, 4);
+                ctx.fill();
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = 'bold 10px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(String(p.data.count), padding.left - 22, p.y);
+
+                // Pulsing ring on current point
                 ctx.beginPath();
                 ctx.arc(p.x, p.y, 11, 0, Math.PI * 2);
                 ctx.strokeStyle = '#FF0043';

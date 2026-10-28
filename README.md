@@ -205,7 +205,7 @@ Desenvolvido em [`js/dashboard-charts.js`](js/dashboard-charts.js) com renderiza
 
 ---
 
-## 🧪 Bateria de Testes Automatizados (57 Asserções)
+## 🧪 Bateria de Testes Automatizados (82 Asserções)
 
 O projeto possui um **Test Runner Interativo Nativo** em [`index/tests.html`](index/tests.html) e [`js/unit-tests.js`](js/unit-tests.js):
 
@@ -223,7 +223,9 @@ O projeto possui um **Test Runner Interativo Nativo** em [`index/tests.html`](in
 | **Brute-Force & Backoff** | 4 | ✅ 100% | Contagem de falhas, bloqueio na 5ª tentativa, backoff exponencial geométrico ($30\text{s} \times 2^{n-1}$), reset pós-sucesso. |
 | **Dashboard Canvas Analytics** | 6 | ✅ 100% | Instanciação de gráficos, histórico de 7 dias, soma Donut 100%, setores do Gauge, alternância de métrica, renderAll e resize. |
 | **Recuperação de Conta & Exportações** | 13 | ✅ 100% | Busca por CPF/Email, token de 6 dígitos, expiração de token, exportação JSON, CSV com BOM, SVG QR Code puro e impressão. |
-| **TOTAL** | **57** | **✅ 100%** | **57 de 57 Testes Automatizados Aprovados com Sucesso.** |
+| **Criptografia Avançada & JWT / TOTP / CSRF** | 15 | ✅ 100% | Comparador de tempo constante `timingSafeEqual`, SHA-256/HMAC-SHA256, JWT RFC 7519, TOTP RFC 6238 e tokens anti-CSRF vinculados à sessão. |
+| **Auditoria Executiva Markdown & Telemetria** | 10 | ✅ 100% | Relatório Markdown corporativo (LGPD Art. 13), cache de telemetria em buffer em anel FIFO, exportação CSV e injeção de headers. |
+| **TOTAL** | **82** | **✅ 100%** | **82 de 82 Testes Automatizados Aprovados com Sucesso Absoluto.** |
 
 ---
 

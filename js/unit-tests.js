@@ -944,6 +944,267 @@
         assert.includes(logsJson, 'LOGIN', 'JSON deve conter os logs serializados');
     });
 
+    // =========================================================================
+    // 11. CRIPTOGRAFIA AVANÇADA, JWT, TOTP & PROTEÇÃO CSRF
+    // =========================================================================
+    runner.add('Criptografia Avançada', 'Timing-Safe Comparator: Igualdade determinística com strings idênticas', () => {
+        assert.isTrue(typeof window.Security.timingSafeEqual === 'function', 'timingSafeEqual deve existir');
+        assert.isTrue(window.Security.timingSafeEqual('kakaroto_token_123', 'kakaroto_token_123'), 'Strings idênticas devem retornar true');
+        assert.isTrue(window.Security.timingSafeEqual('', ''), 'Strings vazias devem retornar true');
+    });
+
+    runner.add('Criptografia Avançada', 'Timing-Safe Comparator: Rejeição de strings com extensões distintas', () => {
+        assert.isFalse(window.Security.timingSafeEqual('short', 'longer_string'), 'Extensões diferentes devem retornar false');
+        assert.isFalse(window.Security.timingSafeEqual('token_abc', 'token_ab'), 'Extensão menor deve retornar false');
+    });
+
+    runner.add('Criptografia Avançada', 'Timing-Safe Comparator: Rejeição de strings de mesmo tamanho com bytes distintos', () => {
+        assert.isFalse(window.Security.timingSafeEqual('hash_token_x', 'hash_token_y'), 'Último caractere distinto deve retornar false');
+        assert.isFalse(window.Security.timingSafeEqual('x_hash_token', 'y_hash_token'), 'Primeiro caractere distinto deve retornar false');
+        assert.isFalse(window.Security.timingSafeEqual(null, 'test'), 'Valores nulos devem ser tratados com segurança');
+    });
+
+    runner.add('Criptografia Avançada', 'CryptoPrimitives SHA-256: Geração determinística de 64 caracteres hexadecimais', () => {
+        const prim = window.Security.CryptoPrimitives;
+        assert.isTrue(typeof prim.sha256Hex === 'function', 'sha256Hex deve existir');
+        const hash = prim.sha256Hex('hello world');
+        assert.equal(hash, 'b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9', 'Digest SHA-256 deve coincidir rigorosamente com padrão NIST/FIPS');
+        assert.equal(hash.length, 64, 'Hash SHA-256 deve ter 64 caracteres hexadecimais');
+    });
+
+    runner.add('Criptografia Avançada', 'CryptoPrimitives HMAC-SHA256: Cálculo com chave simétrica e validação contra vetor FIPS', () => {
+        const prim = window.Security.CryptoPrimitives;
+        assert.isTrue(typeof prim.hmacSha256Hex === 'function', 'hmacSha256Hex deve existir');
+        const hmac = prim.hmacSha256Hex('secret_key', 'test_payload');
+        assert.equal(hmac, 'b02bfc00c8fac5a3002558d1018a3e3e2ea9e50a6f65f1ba13a3a359da3d3414', 'HMAC-SHA256 deve coincidir exatamente com vetor OpenSSL');
+        assert.equal(hmac.length, 64, 'HMAC deve possuir 64 caracteres hexadecimais');
+    });
+
+    runner.add('Criptografia Avançada', 'SecureJWT: Assinatura de token com claims e cabeçalho HS256', () => {
+        const jwt = window.Security.SecureJWT;
+        assert.isTrue(typeof jwt.sign === 'function', 'SecureJWT.sign deve existir');
+        const token = jwt.sign({ sub: 'vegeta.saiyan', role: 'prince' }, 'test_secret_key', 3600);
+        assert.isTrue(typeof token === 'string', 'Token assinado deve ser string');
+        const parts = token.split('.');
+        assert.equal(parts.length, 3, 'JWT deve conter exatamente 3 segmentos separados por ponto');
+        assert.isTrue(parts[0].length > 0 && parts[1].length > 0 && parts[2].length > 0, 'Todos os 3 segmentos devem ser não-vazios');
+    });
+
+    runner.add('Criptografia Avançada', 'SecureJWT: Validação e decodificação de token íntegro', () => {
+        const jwt = window.Security.SecureJWT;
+        const secret = 'super_saiyan_secret_key';
+        const token = jwt.sign({ sub: 'goku.saiyan', power: 9001 }, secret, 1800);
+        const result = jwt.verify(token, secret);
+
+        assert.isTrue(result.valid, 'Token legítimo deve ser validado com sucesso');
+        assert.equal(result.payload.sub, 'goku.saiyan', 'Claim sub deve ser preservada');
+        assert.equal(result.payload.power, 9001, 'Claim personalizada deve ser preservada');
+        assert.isTrue(result.payload.exp > Math.floor(Date.now() / 1000), 'Timestamp de expiração deve ser futuro');
+    });
+
+    runner.add('Criptografia Avançada', 'SecureJWT: Rejeição rigorosa de token adulterado (tampered signature)', () => {
+        const jwt = window.Security.SecureJWT;
+        const secret = 'legit_secret';
+        const token = jwt.sign({ sub: 'gohan.saiyan' }, secret, 3600);
+        const parts = token.split('.');
+
+        // Corrompe a assinatura no terceiro segmento
+        const tamperedToken = `${parts[0]}.${parts[1]}.bad_signature_abc`;
+        const res = jwt.verify(tamperedToken, secret);
+        assert.isFalse(res.valid, 'Token com assinatura modificada deve ser rejeitado');
+        assert.equal(res.error, 'signature_mismatch', 'Motivo do erro deve ser signature_mismatch');
+
+        // Rejeição com chave secreta incorreta
+        const wrongKeyRes = jwt.verify(token, 'wrong_secret_key');
+        assert.isFalse(wrongKeyRes.valid, 'Token verificado com chave incorreta deve ser rejeitado');
+    });
+
+    runner.add('Criptografia Avançada', 'SecureJWT: Rejeição de token expirado com identificação de claim exp', () => {
+        const jwt = window.Security.SecureJWT;
+        const secret = 'exp_secret';
+        // Cria token com expiração negativa (expirado no passado)
+        const expiredToken = jwt.sign({ sub: 'piccolo' }, secret, -60);
+        const res = jwt.verify(expiredToken, secret);
+        assert.isFalse(res.valid, 'Token com exp no passado deve ser rejeitado');
+        assert.isTrue(res.expired, 'Flag expired deve ser true');
+        assert.equal(res.error, 'token_expired', 'Erro deve indicar token_expired');
+    });
+
+    runner.add('Criptografia Avançada', 'TOTPEngine: Decodificação e Codificação Base32 (RFC 4648)', () => {
+        const totp = window.Security.TOTPEngine;
+        assert.isTrue(typeof totp.base32Decode === 'function', 'base32Decode deve existir');
+        const decoded = totp.base32Decode('JBSWY3DPEHPK3PXP');
+        assert.isTrue(Array.isArray(decoded), 'Decodificação deve retornar array de bytes');
+        assert.isTrue(decoded.length > 0, 'Bytes decodificados devem ser não-vazios');
+
+        const reEncoded = totp.base32Encode(decoded);
+        assert.equal(reEncoded, 'JBSWY3DPEHPK3PXP', 'Codificação reversa deve recuperar a chave original');
+    });
+
+    runner.add('Criptografia Avançada', 'TOTPEngine: Geração de código de 6 dígitos numéricos com preenchimento', () => {
+        const totp = window.Security.TOTPEngine;
+        const secret = 'JBSWY3DPEHPK3PXP';
+        const code = totp.generateToken(secret, 1590000000000, 30);
+        assert.isTrue(typeof code === 'string', 'Código TOTP deve ser string');
+        assert.equal(code.length, 6, 'Código TOTP deve ter exatamente 6 dígitos');
+        assert.isTrue(/^\d{6}$/.test(code), 'Código TOTP deve conter exclusivamente números');
+    });
+
+    runner.add('Criptografia Avançada', 'TOTPEngine: Verificação temporal com tolerância de janela (delta +-1)', () => {
+        const totp = window.Security.TOTPEngine;
+        const secret = 'JBSWY3DPEHPK3PXP';
+        const now = Date.now();
+        const currentCode = totp.generateToken(secret, now, 30);
+        assert.isTrue(totp.verify(currentCode, secret, 1, now, 30), 'Código no tempo presente deve ser aceito');
+
+        // Teste de tolerância para código gerado há 28 segundos atrás
+        const pastCode = totp.generateToken(secret, now - 28000, 30);
+        assert.isTrue(totp.verify(pastCode, secret, 1, now, 30), 'Código do passo anterior (offset -1) deve ser aceito');
+
+        // Teste de tolerância para código com leve desvio de relógio para frente (+28s)
+        const futureCode = totp.generateToken(secret, now + 28000, 30);
+        assert.isTrue(totp.verify(futureCode, secret, 1, now, 30), 'Código do próximo passo (offset +1) deve ser aceito');
+    });
+
+    runner.add('Criptografia Avançada', 'TOTPEngine: Rejeição de código incorreto e fora da janela de tolerância', () => {
+        const totp = window.Security.TOTPEngine;
+        const secret = 'JBSWY3DPEHPK3PXP';
+        const now = Date.now();
+        assert.isFalse(totp.verify('000000', secret, 1, now, 30), 'Código aleatório falso deve ser rejeitado');
+
+        // Código gerado há 3 minutos (fora da janela de +-30s)
+        const oldCode = totp.generateToken(secret, now - 180000, 30);
+        assert.isFalse(totp.verify(oldCode, secret, 1, now, 30), 'Código fora da janela de tolerância deve ser rejeitado');
+    });
+
+    runner.add('Criptografia Avançada', 'CSRFProtection: Geração de token criptográfico vinculado à sessão', () => {
+        const csrf = window.Security.CSRFProtection;
+        assert.isTrue(typeof csrf.generateToken === 'function', 'generateToken deve existir');
+        const token = csrf.generateToken('session_goku_saiyan_777');
+        assert.isTrue(typeof token === 'string', 'Token CSRF deve ser string');
+        const parts = token.split(':');
+        assert.equal(parts.length, 4, 'Token CSRF deve ser estruturado em 4 partes (session:timestamp:salt:signature)');
+        assert.equal(parts[0], 'session_goku_saiyan_777', 'Parte 0 deve vincular a sessão exata');
+        assert.equal(parts[3].length, 64, 'Assinatura HMAC de integridade deve possuir 64 caracteres');
+    });
+
+    runner.add('Criptografia Avançada', 'CSRFProtection: Validação de token, rejeição cross-session e detecção de expiração', () => {
+        const csrf = window.Security.CSRFProtection;
+        const sessionId = 'session_vegeta_888';
+        const token = csrf.generateToken(sessionId);
+
+        assert.isTrue(csrf.validateToken(token, sessionId), 'Token legítimo com mesma sessão deve ser validado');
+        assert.isFalse(csrf.validateToken(token, 'different_session_999'), 'Token usado em sessão cruzada deve ser rejeitado');
+        assert.isFalse(csrf.validateToken(token + '_tampered', sessionId), 'Token com assinatura corrompida deve ser rejeitado');
+        assert.isFalse(csrf.validateToken(null, sessionId), 'Valores nulos devem ser rejeitados com segurança');
+    });
+
+    // =========================================================================
+    // 12. AUDITORIA EXECUTIVA MARKDOWN & TELEMETRIA OFFLINE
+    // =========================================================================
+    runner.add('Auditoria & Telemetria', 'Exportação Markdown: Geração de relatório executivo com cabeçalho de integridade', () => {
+        assert.isTrue(typeof window.exportService.exportMarkdown === 'function', 'exportMarkdown deve existir');
+        const md = window.exportService.exportMarkdown();
+        assert.isTrue(typeof md === 'string', 'exportMarkdown deve retornar string Markdown');
+        assert.includes(md, '# Relatório Executivo de Auditoria & Segurança de Acesso', 'Deve conter título de relatório executivo');
+        assert.includes(md, 'Hash de Integridade:', 'Deve conter selo de integridade criptográfica');
+        assert.includes(md, 'Data de Emissão (UTC):', 'Deve conter timestamp formal de emissão');
+    });
+
+    runner.add('Auditoria & Telemetria', 'Exportação Markdown: Seção de identificação de usuário com CPF mascarado (LGPD)', () => {
+        const md = window.exportService.exportMarkdown();
+        assert.includes(md, '## 1. Identificação do Usuário e Sessão', 'Deve conter seção 1');
+        assert.includes(md, 'CPF Mascarado', 'Deve possuir campo de CPF mascarado');
+        assert.includes(md, 'Mascaramento LGPD', 'Deve citar o mascaramento de privacidade');
+        assert.includes(md, 'E-mail Corporativo', 'Deve documentar e-mail corporativo');
+    });
+
+    runner.add('Auditoria & Telemetria', 'Exportação Markdown: Tabela de trilha de auditoria e status de conformidade', () => {
+        const md = window.exportService.exportMarkdown();
+        assert.includes(md, '## 2. Indicadores de Postura de Segurança', 'Deve conter seção de postura de segurança');
+        assert.includes(md, '## 3. Trilha de Auditoria & Registro de Eventos Recentes', 'Deve conter seção de trilha de eventos');
+        assert.includes(md, '| Data / Hora | Categoria | Evento / Ação | Severidade | Status |', 'Deve conter cabeçalho da tabela Markdown');
+        assert.includes(md, 'Criptografia de Credenciais:', 'Deve documentar a cifra de credenciais');
+    });
+
+    runner.add('Auditoria & Telemetria', 'Exportação Markdown: Inclusão de declaração formal de conformidade com a Lei 13.709/2018', () => {
+        const md = window.exportService.exportMarkdown();
+        assert.includes(md, '## 4. Declaração de Conformidade LGPD (Lei nº 13.709/2018)', 'Deve conter seção de conformidade LGPD');
+        assert.includes(md, 'princípio da minimização da coleta', 'Deve registrar aderência aos princípios da LGPD');
+    });
+
+    runner.add('Auditoria & Telemetria', 'OfflineTelemetryCache: Instanciação e inserção de eventos de telemetria', () => {
+        assert.isTrue(typeof window.OfflineTelemetryCache === 'function', 'OfflineTelemetryCache deve ser uma classe');
+        const cache = new window.OfflineTelemetryCache(10);
+        assert.equal(cache.size(), 0, 'Cache inicial deve estar vazio');
+
+        cache.push({ event: 'cluster_health', metric: 'cpu', value: 38, status: 'OPTIMAL' });
+        cache.push({ event: 'auth_attempt', metric: 'latency', value: 120, status: 'OK' });
+        assert.equal(cache.size(), 2, 'Cache deve armazenar 2 itens');
+
+        const items = cache.getAll();
+        assert.equal(items[0].event, 'cluster_health', 'Primeiro item deve ter evento cluster_health');
+        assert.equal(items[1].value, 120, 'Segundo item deve ter valor 120');
+    });
+
+    runner.add('Auditoria & Telemetria', 'OfflineTelemetryCache: Despejo FIFO quando limite do buffer é excedido', () => {
+        const cache = new window.OfflineTelemetryCache(3);
+        cache.push({ event: 'ev_1', value: 10 });
+        cache.push({ event: 'ev_2', value: 20 });
+        cache.push({ event: 'ev_3', value: 30 });
+        assert.equal(cache.size(), 3, 'Deve atingir a capacidade máxima');
+
+        // Inserção do 4º elemento: deve desalojar ev_1 (FIFO)
+        cache.push({ event: 'ev_4', value: 40 });
+        assert.equal(cache.size(), 3, 'Tamanho deve permanecer limitado a 3');
+        const items = cache.getAll();
+        assert.equal(items[0].event, 'ev_2', 'Item ev_1 mais antigo deve ter sido despejado');
+        assert.equal(items[2].event, 'ev_4', 'Item ev_4 mais recente deve estar no final');
+    });
+
+    runner.add('Auditoria & Telemetria', 'OfflineTelemetryCache: Serialização RFC 4180 em formato CSV com UTF-8 BOM', () => {
+        const cache = new window.OfflineTelemetryCache(5);
+        cache.push({ event: 'login_ok', metric: 'auth', value: 1, status: 'SUCCESS' });
+        cache.push({ event: 'rate_limit', metric: 'security', value: 0, status: 'BLOCKED' });
+
+        const csv = cache.toCSV();
+        assert.equal(csv.charCodeAt(0), 0xFEFF, 'CSV de telemetria deve conter UTF-8 BOM');
+        assert.includes(csv, 'Timestamp,Event,Metric,Value,Status', 'Deve conter cabeçalhos tabulares');
+        assert.includes(csv, '"login_ok"', 'Deve conter eventos formatados');
+        assert.includes(csv, '"BLOCKED"', 'Deve conter status formatados');
+    });
+
+    runner.add('Auditoria & Telemetria', 'OfflineTelemetryCache: Persistência e restauração do cache em LocalStorage', () => {
+        const cache1 = new window.OfflineTelemetryCache(10);
+        cache1.push({ event: 'snapshot_a', value: 99 });
+        cache1.push({ event: 'snapshot_b', value: 100 });
+        cache1.persist('test_telemetry_storage_key');
+
+        const cache2 = new window.OfflineTelemetryCache(10);
+        const restored = cache2.restore('test_telemetry_storage_key');
+        assert.isTrue(restored, 'Cache deve ser restaurado com sucesso');
+        assert.equal(cache2.size(), 2, 'Cache restaurado deve possuir 2 itens');
+        assert.equal(cache2.getAll()[0].event, 'snapshot_a', 'Itens restaurados devem manter integridade');
+    });
+
+    runner.add('Auditoria & Telemetria', 'CSRF Header Injection: Cabeçalho X-CSRF-Token para requisições assíncronas', () => {
+        const csrf = window.Security.CSRFProtection;
+        const headers = csrf.getHeaders('custom_token_abc_123');
+        assert.equal(headers['X-CSRF-Token'], 'custom_token_abc_123', 'Cabeçalho X-CSRF-Token deve corresponder ao token');
+        assert.equal(headers['X-Requested-With'], 'XMLHttpRequest', 'Cabeçalho X-Requested-With deve estar configurado');
+    });
+
+    runner.add('Auditoria & Telemetria', 'Validação Cruzada de Postura de Segurança: Integração completa entre Security e AuthService', async () => {
+        assert.isTrue(typeof window.AuthService.generateJwtToken === 'function', 'AuthService.generateJwtToken deve existir');
+        const user = { username: 'goku.saiyan', email: 'goku@capsule.corp', cpf: '52998224725' };
+        const token = window.AuthService.generateJwtToken(user);
+        assert.isTrue(typeof token === 'string', 'Token gerado deve ser string');
+
+        const verification = window.AuthService.verifyJwtToken(token);
+        assert.isTrue(verification.valid, 'Token gerado pelo AuthService deve ser validado pelo motor criptográfico');
+        assert.equal(verification.payload.sub, 'goku.saiyan', 'Subject da sessão deve corresponder ao usuário');
+    });
+
     // Public test runner triggers
     window.runUnitTests = () => runner.run();
 

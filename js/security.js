@@ -763,6 +763,312 @@
     }
 
     // =========================================================================
+    // 7.1 CONSTANT-TIME EQUALITY COMPARATOR (TIMING ATTACK DEFENSE)
+    // =========================================================================
+    function timingSafeEqual(a, b) {
+        if (typeof a !== 'string' || typeof b !== 'string') return false;
+        const lenA = a.length;
+        const lenB = b.length;
+        let mismatch = lenA ^ lenB;
+        const maxLen = Math.max(lenA, lenB);
+        for (let i = 0; i < maxLen; i++) {
+            const charA = i < lenA ? a.charCodeAt(i) : 0;
+            const charB = i < lenB ? b.charCodeAt(i) : 0;
+            mismatch |= (charA ^ charB);
+        }
+        return mismatch === 0;
+    }
+
+    // =========================================================================
+    // 7.2 CRYPTOGRAPHIC PRIMITIVES (PURE JAVASCRIPT SHA-256 & HMAC-SHA256)
+    // =========================================================================
+    const CryptoPrimitives = {
+        sha256Bytes(bytes) {
+            function rightRotate(value, amount) { return (value >>> amount) | (value << (32 - amount)); }
+            const mathPow = Math.pow;
+            const maxWord = mathPow(2, 32);
+            let i, j;
+            const words = [];
+            const bitLength = bytes.length * 8;
+            let hash = [];
+            const k = [];
+            let primeCounter = 0;
+            const isComposite = {};
+            for (let candidate = 2; primeCounter < 64; candidate++) {
+                if (!isComposite[candidate]) {
+                    for (i = candidate * candidate; i < 312; i += candidate) isComposite[i] = true;
+                    hash[primeCounter] = (mathPow(candidate, 0.5) * maxWord) | 0;
+                    k[primeCounter++] = (mathPow(candidate, 1 / 3) * maxWord) | 0;
+                }
+            }
+            const padded = Array.from(bytes);
+            padded.push(0x80);
+            while (padded.length % 64 !== 56) padded.push(0);
+            for (i = 0; i < padded.length; i++) words[i >> 2] |= padded[i] << ((3 - i % 4) * 8);
+            words[padded.length >> 2] = ((bitLength / maxWord) | 0);
+            words[(padded.length >> 2) + 1] = (bitLength | 0);
+            for (j = 0; j < words.length;) {
+                const w = words.slice(j, j += 16);
+                const oldHash = hash.slice(0);
+                for (i = 0; i < 64; i++) {
+                    const w15 = w[i - 15], w2 = w[i - 2];
+                    const s0 = rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3);
+                    const s1 = rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10);
+                    w[i] = (i < 16) ? (w[i] || 0) : (w[i - 16] + s0 + w[i - 7] + s1) | 0;
+                    const s1_ = rightRotate(hash[4], 6) ^ rightRotate(hash[4], 11) ^ rightRotate(hash[4], 25);
+                    const ch = (hash[4] & hash[5]) ^ ((~hash[4]) & hash[6]);
+                    const temp1 = (hash[7] + s1_ + ch + k[i] + w[i]) | 0;
+                    const s0_ = rightRotate(hash[0], 2) ^ rightRotate(hash[0], 13) ^ rightRotate(hash[0], 22);
+                    const maj = (hash[0] & hash[1]) ^ (hash[0] & hash[2]) ^ (hash[1] & hash[2]);
+                    const temp2 = (s0_ + maj) | 0;
+                    hash = [(temp1 + temp2) | 0, hash[0], hash[1], hash[2], (hash[3] + temp1) | 0, hash[4], hash[5], hash[6]];
+                }
+                for (i = 0; i < 8; i++) hash[i] = (hash[i] + oldHash[i]) | 0;
+            }
+            const out = [];
+            for (i = 0; i < 8; i++) {
+                for (j = 3; j >= 0; j--) out.push((hash[i] >> (8 * j)) & 255);
+            }
+            return out;
+        },
+
+        sha256Hex(str) {
+            const bytes = typeof str === 'string' ? Array.from(new TextEncoder().encode(str)) : Array.from(str);
+            const out = this.sha256Bytes(bytes);
+            return out.map(b => b.toString(16).padStart(2, '0')).join('');
+        },
+
+        hmacSha256Raw(keyBytes, msgBytes) {
+            const keyArr = Array.from(keyBytes);
+            const msgArr = Array.from(msgBytes);
+            let k = keyArr.length > 64 ? this.sha256Bytes(keyArr) : keyArr;
+            while (k.length < 64) k.push(0);
+            const oKeyPad = k.map(b => b ^ 0x5c);
+            const iKeyPad = k.map(b => b ^ 0x36);
+            const inner = this.sha256Bytes(iKeyPad.concat(msgArr));
+            return this.sha256Bytes(oKeyPad.concat(inner));
+        },
+
+        hmacSha256Hex(keyStr, msgStr) {
+            const keyBytes = typeof keyStr === 'string' ? Array.from(new TextEncoder().encode(keyStr)) : Array.from(keyStr);
+            const msgBytes = typeof msgStr === 'string' ? Array.from(new TextEncoder().encode(msgStr)) : Array.from(msgStr);
+            const digestBytes = this.hmacSha256Raw(keyBytes, msgBytes);
+            return digestBytes.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+    };
+
+    function base64UrlEncode(str) {
+        let b64;
+        if (typeof Buffer !== 'undefined') {
+            b64 = Buffer.from(str, 'utf8').toString('base64');
+        } else if (typeof btoa !== 'undefined') {
+            b64 = btoa(unescape(encodeURIComponent(str)));
+        } else {
+            b64 = '';
+        }
+        return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    }
+
+    function base64UrlDecode(str) {
+        let b64 = str.replace(/-/g, '+').replace(/_/g, '/');
+        while (b64.length % 4) b64 += '=';
+        if (typeof Buffer !== 'undefined') {
+            return Buffer.from(b64, 'base64').toString('utf8');
+        } else if (typeof atob !== 'undefined') {
+            return decodeURIComponent(escape(atob(b64)));
+        }
+        return '';
+    }
+
+    // =========================================================================
+    // 7.3 SECURE JWT (RFC 7519 HMAC-SHA256 TOKEN IMPLEMENTATION)
+    // =========================================================================
+    const SecureJWT = {
+        sign(payload, secret, expiresInSeconds = 3600) {
+            if (!secret) throw new Error('JWT Secret is required');
+            const header = { alg: 'HS256', typ: 'JWT' };
+            const nowSec = Math.floor(Date.now() / 1000);
+            const fullPayload = {
+                ...payload,
+                iat: payload.iat || nowSec,
+                exp: payload.exp || (nowSec + expiresInSeconds)
+            };
+            const headerB64 = base64UrlEncode(JSON.stringify(header));
+            const payloadB64 = base64UrlEncode(JSON.stringify(fullPayload));
+            const signingInput = `${headerB64}.${payloadB64}`;
+            const signatureHex = CryptoPrimitives.hmacSha256Hex(secret, signingInput);
+            const signatureB64 = base64UrlEncode(signatureHex);
+            return `${signingInput}.${signatureB64}`;
+        },
+
+        verify(token, secret) {
+            if (!token || typeof token !== 'string') {
+                return { valid: false, error: 'invalid_token_format' };
+            }
+            const parts = token.split('.');
+            if (parts.length !== 3) {
+                return { valid: false, error: 'invalid_segments' };
+            }
+            const [headerB64, payloadB64, signatureB64] = parts;
+            const signingInput = `${headerB64}.${payloadB64}`;
+            const expectedSigHex = CryptoPrimitives.hmacSha256Hex(secret, signingInput);
+            const expectedSigB64 = base64UrlEncode(expectedSigHex);
+
+            if (!timingSafeEqual(signatureB64, expectedSigB64)) {
+                return { valid: false, error: 'signature_mismatch' };
+            }
+
+            try {
+                const payload = JSON.parse(base64UrlDecode(payloadB64));
+                const nowSec = Math.floor(Date.now() / 1000);
+                if (payload.exp && nowSec > payload.exp) {
+                    return { valid: false, expired: true, error: 'token_expired', payload };
+                }
+                return { valid: true, payload };
+            } catch (err) {
+                return { valid: false, error: 'malformed_payload' };
+            }
+        },
+
+        decode(token) {
+            if (!token || typeof token !== 'string') return null;
+            const parts = token.split('.');
+            if (parts.length !== 3) return null;
+            try {
+                return {
+                    header: JSON.parse(base64UrlDecode(parts[0])),
+                    payload: JSON.parse(base64UrlDecode(parts[1])),
+                    signature: parts[2]
+                };
+            } catch {
+                return null;
+            }
+        }
+    };
+
+    // =========================================================================
+    // 7.4 RFC 6238 TOTP ENGINE (TWO-FACTOR AUTHENTICATION)
+    // =========================================================================
+    const TOTPEngine = {
+        alphabet: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567',
+
+        base32Decode(base32) {
+            const clean = String(base32 || '').toUpperCase().replace(/=+$/, '').replace(/\s/g, '');
+            let bits = 0;
+            let value = 0;
+            const output = [];
+            for (let i = 0; i < clean.length; i++) {
+                const idx = this.alphabet.indexOf(clean[i]);
+                if (idx === -1) continue;
+                value = (value << 5) | idx;
+                bits += 5;
+                if (bits >= 8) {
+                    output.push((value >>> (bits - 8)) & 255);
+                    bits -= 8;
+                }
+            }
+            return output;
+        },
+
+        base32Encode(bytes) {
+            let bits = 0;
+            let value = 0;
+            let output = '';
+            for (let i = 0; i < bytes.length; i++) {
+                value = (value << 8) | bytes[i];
+                bits += 8;
+                while (bits >= 5) {
+                    output += this.alphabet[(value >>> (bits - 5)) & 31];
+                    bits -= 5;
+                }
+            }
+            if (bits > 0) {
+                output += this.alphabet[(value << (5 - bits)) & 31];
+            }
+            return output;
+        },
+
+        generateSecret(length = 16) {
+            const randomBytes = [];
+            for (let i = 0; i < length; i++) randomBytes.push(Math.floor(Math.random() * 256));
+            return this.base32Encode(randomBytes).substring(0, length);
+        },
+
+        generateToken(secretBase32, timeMs = Date.now(), step = 30) {
+            const keyBytes = this.base32Decode(secretBase32);
+            if (keyBytes.length === 0) return '000000';
+            const counter = Math.floor((timeMs / 1000) / step);
+            const counterBytes = new Uint8Array(8);
+            let tmp = counter;
+            for (let i = 7; i >= 0; i--) {
+                counterBytes[i] = tmp & 0xff;
+                tmp = Math.floor(tmp / 256);
+            }
+            const hmac = CryptoPrimitives.hmacSha256Raw(keyBytes, counterBytes);
+            const offset = hmac[hmac.length - 1] & 0x0f;
+            const code = ((hmac[offset] & 0x7f) << 24) |
+                         ((hmac[offset + 1] & 0xff) << 16) |
+                         ((hmac[offset + 2] & 0xff) << 8) |
+                         (hmac[offset + 3] & 0xff);
+            return (code % 1000000).toString().padStart(6, '0');
+        },
+
+        verify(token, secretBase32, window = 1, timeMs = Date.now(), step = 30) {
+            if (!token || !secretBase32) return false;
+            const normalizedToken = String(token).trim();
+            for (let errorWindow = -window; errorWindow <= window; errorWindow++) {
+                const checkTime = timeMs + (errorWindow * step * 1000);
+                const expected = this.generateToken(secretBase32, checkTime, step);
+                if (timingSafeEqual(normalizedToken, expected)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    };
+
+    // =========================================================================
+    // 7.5 CSRF DEFENSE & HEADER INJECTION
+    // =========================================================================
+    const CSRFProtection = {
+        csrfSecret: 'csrf_portal_saiyan_audit_sec_2026',
+
+        generateToken(sessionId = 'default_session') {
+            const ts = Date.now().toString(16);
+            const rand = Math.random().toString(36).substring(2, 10);
+            const payload = `${sessionId}:${ts}:${rand}`;
+            const signature = CryptoPrimitives.hmacSha256Hex(this.csrfSecret, payload);
+            return `${payload}:${signature}`;
+        },
+
+        validateToken(token, sessionId = 'default_session', maxAgeMs = 3600000) {
+            if (!token || typeof token !== 'string') return false;
+            const parts = token.split(':');
+            if (parts.length !== 4) return false;
+            const [tokenSession, tsHex, rand, signature] = parts;
+
+            if (tokenSession !== sessionId) return false;
+
+            const payload = `${tokenSession}:${tsHex}:${rand}`;
+            const expectedSig = CryptoPrimitives.hmacSha256Hex(this.csrfSecret, payload);
+            if (!timingSafeEqual(signature, expectedSig)) return false;
+
+            const issuedAt = parseInt(tsHex, 16);
+            if (isNaN(issuedAt) || (Date.now() - issuedAt > maxAgeMs) || issuedAt > Date.now() + 60000) {
+                return false;
+            }
+            return true;
+        },
+
+        getHeaders(token) {
+            return {
+                'X-CSRF-Token': token || this.generateToken(),
+                'X-Requested-With': 'XMLHttpRequest'
+            };
+        }
+    };
+
+    // =========================================================================
     // 8. UNIFIED SECURITY OBJECT & GLOBAL EXPOSURE
     // =========================================================================
     return {
@@ -791,6 +1097,13 @@
         sanitizeHTML: Sanitizer.sanitizeHTML.bind(Sanitizer),
         escapeText: Sanitizer.escapeText.bind(Sanitizer),
         sanitizeInput: Sanitizer.sanitizeInput.bind(Sanitizer),
+
+        // Constant-time, JWT, TOTP, and CSRF Protection
+        timingSafeEqual,
+        CryptoPrimitives,
+        SecureJWT,
+        TOTPEngine,
+        CSRFProtection,
 
         // A11y
         initA11y
