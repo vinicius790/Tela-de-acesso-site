@@ -170,6 +170,59 @@
       } catch (e) {}
     }
 
+    // Ki Aura & Super Saiyan Transformation Surge
+    playKiSurge(freq = 440) {
+      if (this.isMuted || !this.ctx) return;
+      this.resume();
+      try {
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(freq * 0.5, now);
+        osc.frequency.exponentialRampToValueAtTime(freq * 2.2, now + 0.35);
+        osc.frequency.exponentialRampToValueAtTime(freq, now + 0.6);
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(600, now);
+        filter.frequency.exponentialRampToValueAtTime(3200, now + 0.3);
+        filter.frequency.exponentialRampToValueAtTime(800, now + 0.6);
+
+        gain.gain.setValueAtTime(0.01, now);
+        gain.gain.linearRampToValueAtTime(0.3, now + 0.15);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.65);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.65);
+      } catch (e) {}
+    }
+
+    // Sedov-Taylor Shockwave Boom
+    playShockwave() {
+      if (this.isMuted || !this.ctx) return;
+      this.resume();
+      try {
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(120, now);
+        osc.frequency.exponentialRampToValueAtTime(25, now + 0.5);
+
+        gain.gain.setValueAtTime(0.4, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.5);
+      } catch (e) {}
+    }
+
     // Scouter Reboot Ascending Glide
     playRebootSweep() {
       if (this.isMuted || !this.ctx) return;
@@ -368,25 +421,234 @@
   }
 
   /* ==========================================================================
-     2. PARTICLE BURST CANVAS SYSTEM (Capsule Poof & Ki Bursts)
+     1.5 HIGH-PRECISION NUMERICAL PHYSICS ENGINE
+     ========================================================================== */
+  class HighPrecisionPhysicsEngine {
+    /**
+     * Velocity Verlet Numerical Integrator for particle kinematics with aerodynamic Rayleigh drag
+     * x(t+dt) = x(t) + v(t)*dt + 0.5*a(t)*dt^2
+     * v(t+dt) = (v(t) + 0.5*(a(t) + a(t+dt))*dt) * damping
+     */
+    static integrateVerlet(particle, ax = 0, ay = 0, dt = 0.016, damping = 0.96) {
+      if (!particle) return particle;
+      const step = dt * 60;
+      particle.x += particle.vx * step + 0.5 * ax * step * step;
+      particle.y += particle.vy * step + 0.5 * ay * step * step;
+      particle.vx = (particle.vx + ax * step) * damping;
+      particle.vy = (particle.vy + ay * step) * damping;
+      return particle;
+    }
+
+    /**
+     * 4th-Order Runge-Kutta (RK4) Differential Solver for Continuous Metabolic Stamina Decay
+     * dS/dt = - [ 0.20 + 0.0075 * (G)^1.25 ] * FormMultiplier * (0.35 + 0.65 * S/100)
+     */
+    static integrateStaminaRK4(currentStamina, gForce, formDrainMult = 1.0, dt = 0.5) {
+      if (currentStamina <= 0) return 0;
+
+      const f = (s) => {
+        const clampedS = Math.max(0, Math.min(100, s));
+        const baseStrain = 0.20 + Math.pow(Math.max(1, gForce) / 45, 1.25);
+        const fatigueScaling = 0.35 + 0.65 * (clampedS / 100);
+        return -baseStrain * formDrainMult * fatigueScaling;
+      };
+
+      const k1 = f(currentStamina);
+      const k2 = f(currentStamina + 0.5 * dt * k1);
+      const k3 = f(currentStamina + 0.5 * dt * k2);
+      const k4 = f(currentStamina + dt * k3);
+
+      const dS = (dt / 6) * (k1 + 2 * k2 + 2 * k3 + k4);
+      return Math.max(0, Math.min(100, currentStamina + dS));
+    }
+
+    /**
+     * Sedov-Taylor Self-Similar Shockwave Blast Radius: R(t) = xi * (E * t^2 / rho)^(1/5)
+     */
+    static calculateSedovTaylorRadius(energy = 1000, density = 1.225, time = 0.1, xi = 1.033) {
+      const t = Math.max(0.001, time);
+      return xi * Math.pow((energy * t * t) / density, 0.2);
+    }
+  }
+
+  /* ==========================================================================
+     1.6 SAIYAN TRANSFORMATION MULTIPLIER ENGINE
+     ========================================================================== */
+  class SaiyanTransformationEngine {
+    constructor(audio, particles, gravityChamber) {
+      this.audio = audio;
+      this.particles = particles;
+      this.gravity = gravityChamber;
+
+      this.FORMS = {
+        base: {
+          id: 'base',
+          name: 'Base Form',
+          japanese: '通常',
+          multiplier: 1,
+          drainMult: 1.0,
+          color: '#00f0ff',
+          auraKey: 'aura-base',
+          colors: ['#00f0ff', '#ffffff', '#38bdf8']
+        },
+        kaioken: {
+          id: 'kaioken',
+          name: 'Kaiō-ken x20',
+          japanese: '界王拳',
+          multiplier: 20,
+          drainMult: 2.5,
+          color: '#ff1744',
+          auraKey: 'aura-kaioken',
+          colors: ['#ff1744', '#ff5252', '#d50000', '#ffffff']
+        },
+        ssj1: {
+          id: 'ssj1',
+          name: 'Super Saiyajin',
+          japanese: '超サイヤ人',
+          multiplier: 50,
+          drainMult: 1.8,
+          color: '#ffd700',
+          auraKey: 'aura-ssj1',
+          colors: ['#ffd700', '#ffea00', '#ffffff', '#f59e0b']
+        },
+        ssj2: {
+          id: 'ssj2',
+          name: 'Super Saiyajin 2',
+          japanese: '超サイヤ人2',
+          multiplier: 100,
+          drainMult: 2.2,
+          color: '#ffe600',
+          auraKey: 'aura-ssj2',
+          colors: ['#ffe600', '#00f0ff', '#ffffff', '#fbbf24']
+        },
+        ssj3: {
+          id: 'ssj3',
+          name: 'Super Saiyajin 3',
+          japanese: '超サイヤ人3',
+          multiplier: 400,
+          drainMult: 3.8,
+          color: '#ff9100',
+          auraKey: 'aura-ssj3',
+          colors: ['#ff9100', '#ffab00', '#ffd700', '#ffffff']
+        },
+        ssj_god: {
+          id: 'ssj_god',
+          name: 'Super Saiyajin Deus',
+          japanese: '超サイヤ人ゴッド',
+          multiplier: 20000,
+          drainMult: 2.6,
+          color: '#ff2d55',
+          auraKey: 'aura-god',
+          colors: ['#ff2d55', '#ff007f', '#ff8da1', '#ffffff']
+        },
+        ssj_blue: {
+          id: 'ssj_blue',
+          name: 'Super Saiyajin Blue',
+          japanese: '超サイヤ人ブルー',
+          multiplier: 50000,
+          drainMult: 3.2,
+          color: '#00d2ff',
+          auraKey: 'aura-blue',
+          colors: ['#00d2ff', '#0099ff', '#ffffff', '#7000ff']
+        },
+        ultra_instinct: {
+          id: 'ultra_instinct',
+          name: 'Instinto Superior (Migatte no Gokui)',
+          japanese: '身勝手の極意',
+          multiplier: 500000,
+          drainMult: 4.8,
+          color: '#e0e7ff',
+          auraKey: 'aura-ui',
+          colors: ['#e0e7ff', '#818cf8', '#c7d2fe', '#ffffff', '#a5b4fc']
+        }
+      };
+
+      this.currentForm = this.FORMS.base;
+    }
+
+    transformTo(formKey) {
+      const form = this.FORMS[formKey];
+      if (!form) return false;
+      this.currentForm = form;
+
+      if (this.audio) {
+        this.audio.playKiSurge(form.multiplier > 1000 ? 600 : 440);
+        this.audio.playShockwave();
+      }
+
+      const flash = document.getElementById('kiBurstFlash');
+      if (flash) {
+        flash.classList.remove('ignite');
+        void flash.offsetWidth;
+        flash.classList.add('ignite');
+      }
+
+      if (this.particles) {
+        const cx = typeof window !== 'undefined' ? window.innerWidth / 2 : 400;
+        const cy = typeof window !== 'undefined' ? window.innerHeight / 2 : 300;
+        this.particles.spawnShockwave(cx, cy, 380, form.color, 12, 4);
+        this.particles.spawnBurst(cx, cy, 70, form.colors);
+      }
+
+      if (typeof document !== 'undefined') {
+        document.querySelectorAll('.transformation-chip').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.form === formKey);
+        });
+
+        const badge = document.getElementById('currentFormBadge');
+        if (badge) {
+          badge.textContent = `${form.name} (x${form.multiplier.toLocaleString()})`;
+          badge.style.borderColor = form.color;
+          badge.style.color = form.color;
+          badge.style.boxShadow = `0 0 14px ${form.color}66`;
+        }
+      }
+
+      if (this.gravity) {
+        this.gravity.updateTelemetry();
+      }
+
+      return true;
+    }
+  }
+
+  /* ==========================================================================
+     2. PARTICLE BURST CANVAS SYSTEM (Capsule Poof, Shockwaves & Ki Bursts)
      ========================================================================== */
   class ParticleSystem {
     constructor(canvasId) {
-      this.canvas = document.getElementById(canvasId);
+      this.canvas = typeof document !== 'undefined' ? document.getElementById(canvasId) : null;
       this.ctx = this.canvas ? this.canvas.getContext('2d') : null;
       this.particles = [];
+      this.shockwaves = [];
       this.animId = null;
 
-      if (this.canvas) {
+      if (this.canvas && typeof window !== 'undefined') {
         this.resize();
         window.addEventListener('resize', () => this.resize());
       }
     }
 
     resize() {
-      if (!this.canvas) return;
+      if (!this.canvas || typeof window === 'undefined') return;
       this.canvas.width = window.innerWidth;
       this.canvas.height = window.innerHeight;
+    }
+
+    spawnShockwave(x, y, maxRadius = 320, color = '#00f0ff', speed = 10, lineWidth = 3) {
+      const cx = x || (this.canvas ? this.canvas.width / 2 : 200);
+      const cy = y || (this.canvas ? this.canvas.height / 2 : 200);
+      this.shockwaves.push({
+        x: cx,
+        y: cy,
+        radius: 4,
+        maxRadius: maxRadius,
+        color: color,
+        speed: speed,
+        lineWidth: lineWidth,
+        alpha: 1.0
+      });
+      if (!this.animId) this.loop();
     }
 
     spawnBurst(x, y, count = 45, colors = ['#00f0ff', '#ffd700', '#ffffff', '#9333ea']) {
@@ -416,12 +678,33 @@
       if (!this.ctx) return;
       this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
+      // Render Sedov-Taylor shockwaves
+      for (let s = this.shockwaves.length - 1; s >= 0; s--) {
+        const sw = this.shockwaves[s];
+        sw.radius += sw.speed;
+        sw.alpha = Math.max(0, 1 - (sw.radius / sw.maxRadius));
+
+        if (sw.radius >= sw.maxRadius || sw.alpha <= 0) {
+          this.shockwaves.splice(s, 1);
+          continue;
+        }
+
+        this.ctx.save();
+        this.ctx.globalAlpha = sw.alpha;
+        this.ctx.strokeStyle = sw.color;
+        this.ctx.lineWidth = sw.lineWidth;
+        this.ctx.shadowBlur = 14;
+        this.ctx.shadowColor = sw.color;
+        this.ctx.beginPath();
+        this.ctx.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2);
+        this.ctx.stroke();
+        this.ctx.restore();
+      }
+
+      // Render particles with Velocity Verlet integrator
       for (let i = this.particles.length - 1; i >= 0; i--) {
         const p = this.particles[i];
-        p.x += p.vx;
-        p.y += p.vy;
-        p.vx *= 0.96;
-        p.vy *= 0.96;
+        HighPrecisionPhysicsEngine.integrateVerlet(p, 0, 0.015, 0.016, 0.96);
         p.alpha -= p.decay;
 
         if (p.alpha <= 0) {
@@ -440,7 +723,7 @@
         this.ctx.restore();
       }
 
-      if (this.particles.length > 0) {
+      if (this.particles.length > 0 || this.shockwaves.length > 0) {
         this.animId = requestAnimationFrame(() => this.loop());
       } else {
         this.animId = null;
@@ -812,6 +1095,12 @@
       if (this.gValDisplay) this.gValDisplay.textContent = `${this.gForce}G`;
       if (this.effWeightDisplay) this.effWeightDisplay.textContent = weightStr;
 
+      // Effective battle power taking transformation multiplier into account
+      const mult = this.transformationEngine ? this.transformationEngine.currentForm.multiplier : 1;
+      const effectiveBP = (this.userBattlePower + this.sessionGainedBP) * mult;
+      if (this.userBpDisplay) this.userBpDisplay.textContent = effectiveBP.toLocaleString();
+      if (this.gainedBpDisplay) this.gainedBpDisplay.textContent = `+${(this.sessionGainedBP * mult).toLocaleString()}`;
+
       // Human strain equivalent
       let equiv = 'Normal (Gravidade Terrestre)';
       if (this.gForce >= 10 && this.gForce < 50) equiv = 'Planeta Kaioh (Carro Compacto)';
@@ -871,20 +1160,17 @@
     tickTraining() {
       if (!this.isTraining) return;
 
-      // Stamina drain formula: scale with G-force
-      const drainPerSec = 0.25 + Math.pow(this.gForce / 45, 1.25);
-      const drainTick = drainPerSec * 0.5;
-      this.stamina = Math.max(0, this.stamina - drainTick);
+      // Numerical differential RK4 solver for metabolic stamina decay
+      const formDrainMult = this.transformationEngine ? this.transformationEngine.currentForm.drainMult : 1.0;
+      this.stamina = HighPrecisionPhysicsEngine.integrateStaminaRK4(this.stamina, this.gForce, formDrainMult, 0.5);
 
-      // BP growth formula: scales exponentially with G-force
+      // BP growth formula: scales exponentially with G-force and stamina level
       const growthPerSec = Math.round(Math.pow(this.gForce, 1.2) * 1.5 * (this.stamina / 100));
       const growthTick = Math.max(1, Math.round(growthPerSec * 0.5));
-      this.userBattlePower += growthTick;
       this.sessionGainedBP += growthTick;
 
       this.updateStaminaUI();
-      if (this.userBpDisplay) this.userBpDisplay.textContent = this.userBattlePower.toLocaleString();
-      if (this.gainedBpDisplay) this.gainedBpDisplay.textContent = `+${this.sessionGainedBP.toLocaleString()}`;
+      this.updateTelemetry();
 
       // Check for Exhaustion Collapse
       if (this.stamina <= 0) {
@@ -1098,46 +1384,83 @@
   /* ==========================================================================
      6. MAIN APPLICATION INITIALIZATION
      ========================================================================== */
-  document.addEventListener('DOMContentLoaded', () => {
-    const audio = new CapsuleAudioEngine();
-    const particles = new ParticleSystem('capsuleParticleCanvas');
-    const scouter = new SaiyanScouter(audio, particles);
-    const gravity = new GravityChamber(audio, scouter);
-    const inventory = new CapsuleInventory(audio, particles, gravity);
+  if (typeof document !== 'undefined') {
+    document.addEventListener('DOMContentLoaded', () => {
+      const audio = new CapsuleAudioEngine();
+      const particles = new ParticleSystem('capsuleParticleCanvas');
+      const scouter = new SaiyanScouter(audio, particles);
+      const gravity = new GravityChamber(audio, scouter);
+      const transformationEngine = new SaiyanTransformationEngine(audio, particles, gravity);
+      gravity.transformationEngine = transformationEngine;
+      const inventory = new CapsuleInventory(audio, particles, gravity);
 
-    // Audio Toggle in Navigation
-    const btnAudio = document.getElementById('btnAudioToggle');
-    if (btnAudio) {
-      btnAudio.addEventListener('click', () => {
-        const muted = audio.toggleMute();
-        btnAudio.innerHTML = muted
-          ? '<i class="fas fa-volume-mute"></i> Áudio: OFF'
-          : '<i class="fas fa-volume-up"></i> Áudio: ON';
-        btnAudio.classList.toggle('active', !muted);
+      // Audio Toggle in Navigation
+      const btnAudio = document.getElementById('btnAudioToggle');
+      if (btnAudio) {
+        btnAudio.addEventListener('click', () => {
+          const muted = audio.toggleMute();
+          btnAudio.innerHTML = muted
+            ? '<i class="fas fa-volume-mute"></i> Áudio: OFF'
+            : '<i class="fas fa-volume-up"></i> Áudio: ON';
+          btnAudio.classList.toggle('active', !muted);
+        });
+      }
+
+      // Fullscreen Toggle
+      const btnFullscreen = document.getElementById('btnFullscreen');
+      if (btnFullscreen) {
+        btnFullscreen.addEventListener('click', () => {
+          if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(() => {});
+            btnFullscreen.innerHTML = '<i class="fas fa-compress"></i> Normal';
+          } else {
+            document.exitFullscreen().catch(() => {});
+            btnFullscreen.innerHTML = '<i class="fas fa-expand"></i> Tela Cheia';
+          }
+        });
+      }
+
+      // Transformation Selector Chips
+      document.querySelectorAll('.transformation-chip').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const formKey = btn.dataset.form;
+          if (formKey) {
+            transformationEngine.transformTo(formKey);
+          }
+        });
       });
-    }
 
-    // Fullscreen Toggle
-    const btnFullscreen = document.getElementById('btnFullscreen');
-    if (btnFullscreen) {
-      btnFullscreen.addEventListener('click', () => {
-        if (!document.fullscreenElement) {
-          document.documentElement.requestFullscreen().catch(() => {});
-          btnFullscreen.innerHTML = '<i class="fas fa-compress"></i> Normal';
-        } else {
-          document.exitFullscreen().catch(() => {});
-          btnFullscreen.innerHTML = '<i class="fas fa-expand"></i> Tela Cheia';
-        }
-      });
-    }
+      // Expose for debugging & external integrations
+      window.HighPrecisionPhysicsEngine = HighPrecisionPhysicsEngine;
+      window.SaiyanTransformationEngine = SaiyanTransformationEngine;
+      window.CapsuleCorp = {
+        audio,
+        particles,
+        scouter,
+        gravity,
+        inventory,
+        transformationEngine,
+        HighPrecisionPhysicsEngine
+      };
+    });
+  }
 
-    // Expose for debugging & external integrations
-    window.CapsuleCorp = {
-      audio,
-      particles,
-      scouter,
-      gravity,
-      inventory
+  // Global window exposure for headless tests & unit runners
+  if (typeof window !== 'undefined') {
+    window.HighPrecisionPhysicsEngine = HighPrecisionPhysicsEngine;
+    window.SaiyanTransformationEngine = SaiyanTransformationEngine;
+  }
+
+  // CommonJS Node.js module export support
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+      HighPrecisionPhysicsEngine,
+      SaiyanTransformationEngine,
+      CapsuleAudioEngine,
+      ParticleSystem,
+      GravityChamber,
+      SaiyanScouter,
+      CapsuleInventory
     };
-  });
+  }
 })();

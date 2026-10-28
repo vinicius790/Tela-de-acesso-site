@@ -36,7 +36,17 @@
     }
 
     if (typeof window !== 'undefined') {
-        window.Security = securityLib;
+        try {
+            Object.defineProperty(window, 'Security', {
+                value: securityLib,
+                writable: true,
+                configurable: true,
+                enumerable: true
+            });
+        } catch (_) {
+            window.Security = securityLib;
+        }
+
         window.SecurityUtils = {
             sanitizeHTML: securityLib.sanitizeHTML,
             sanitizeInput: securityLib.sanitizeInput,
@@ -60,6 +70,9 @@
     }
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
     'use strict';
+
+    // Prototype pollution defense: sanitize prototype dictionaries
+    const createSafeDict = () => Object.create(null);
 
     // =========================================================================
     // 1. TOP 100 COMMON PASSWORDS & DICTIONARY BLACKLIST
@@ -884,6 +897,8 @@
     // 7.3 SECURE JWT (RFC 7519 HMAC-SHA256 TOKEN IMPLEMENTATION)
     // =========================================================================
     const SecureJWT = {
+        base64UrlEncode,
+        base64UrlDecode,
         sign(payload, secret, expiresInSeconds = 3600) {
             if (!secret) throw new Error('JWT Secret is required');
             const header = { alg: 'HS256', typ: 'JWT' };
@@ -1069,6 +1084,469 @@
     };
 
     // =========================================================================
+    // 7.4 ASYMMETRIC JWKS & RS256/ES256 SIMULATION ENGINE (RFC 7517 / RFC 7518)
+    // =========================================================================
+    const JWKSEngine = {
+        _activeKeyId: 'k-rsa-2026-q4-active',
+        _keys: [
+            {
+                kty: 'RSA',
+                use: 'sig',
+                alg: 'RS256',
+                kid: 'k-rsa-2026-q4-active',
+                status: 'active',
+                createdAt: Date.now() - 86400000,
+                expiresAt: Date.now() + 30 * 86400000,
+                n: 'u1W9xR2pQzM8vL4kY6tH3jF1dG8sA2wE5nB7mC9xP3qR6tV8yZ1aC3eG5iK7mO9qM',
+                e: 'AQAB',
+                _privateKey: 'rsa_priv_2026_q4_active_secret_seed'
+            },
+            {
+                kty: 'EC',
+                crv: 'P-256',
+                use: 'sig',
+                alg: 'ES256',
+                kid: 'k-ec-2026-q4-active',
+                status: 'active',
+                createdAt: Date.now() - 86400000,
+                expiresAt: Date.now() + 30 * 86400000,
+                x: 'f83OJ3D2xF1Bg8vub9tLe1gHMzV76e8Tus9uPHvRVEU',
+                y: 'x_daQpqAhFeAgYwqYL-qtvYQQU6QCw8x9nHzU52-eqU',
+                _privateKey: 'ec_p256_priv_2026_q4_active_secret_seed'
+            }
+        ],
+
+        getJWKS() {
+            return {
+                keys: this._keys.map(k => {
+                    const { _privateKey, ...publicJWK } = k;
+                    return publicJWK;
+                })
+            };
+        },
+
+        rotateKeys(alg = 'RS256') {
+            const newKid = `k-${alg.toLowerCase()}-${Date.now().toString(36)}`;
+            const prevActive = this._keys.find(k => k.kid === this._activeKeyId);
+            if (prevActive) {
+                prevActive.status = 'grace_period';
+                prevActive.expiresAt = Date.now() + 2 * 3600000;
+            }
+            const newKey = {
+                kty: alg === 'ES256' ? 'EC' : 'RSA',
+                use: 'sig',
+                alg: alg,
+                kid: newKid,
+                status: 'active',
+                createdAt: Date.now(),
+                expiresAt: Date.now() + 30 * 86400000,
+                n: 'rotated_' + Math.random().toString(36).substring(2, 15),
+                e: 'AQAB',
+                _privateKey: `priv_${newKid}_seed`
+            };
+            this._keys.unshift(newKey);
+            this._activeKeyId = newKid;
+            return { newKeyId: newKid, totalKeys: this._keys.length };
+        },
+
+        signAsymmetric(payload, options = {}) {
+            const alg = options.alg || 'RS256';
+            const activeKey = this._keys.find(k => k.kid === this._activeKeyId) || this._keys[0];
+            const header = {
+                alg: activeKey.alg,
+                typ: 'JWT',
+                kid: activeKey.kid
+            };
+            const now = Math.floor(Date.now() / 1000);
+            const fullPayload = {
+                iat: now,
+                exp: now + (options.expiresInSeconds || 900),
+                jti: 'jti_' + Math.random().toString(36).substring(2, 12),
+                iss: 'https://auth.capsulecorp.com.br',
+                ...payload
+            };
+
+            const hB64 = SecureJWT.base64UrlEncode(JSON.stringify(header));
+            const pB64 = SecureJWT.base64UrlEncode(JSON.stringify(fullPayload));
+            const signingInput = `${hB64}.${pB64}`;
+            const signature = CryptoPrimitives.hmacSha256Hex(activeKey._privateKey, signingInput);
+            return `${signingInput}.${signature}`;
+        },
+
+        verifyAsymmetric(token) {
+            if (!token || typeof token !== 'string') return { valid: false, reason: 'INVALID_FORMAT' };
+            const parts = token.split('.');
+            if (parts.length !== 3) return { valid: false, reason: 'MALFORMED_JWT' };
+
+            const [hB64, pB64, signature] = parts;
+            let header, payload;
+            try {
+                header = JSON.parse(SecureJWT.base64UrlDecode(hB64));
+                payload = JSON.parse(SecureJWT.base64UrlDecode(pB64));
+            } catch (e) {
+                return { valid: false, reason: 'JSON_PARSE_ERROR' };
+            }
+
+            const kid = header.kid;
+            const keyRecord = this._keys.find(k => k.kid === kid);
+            if (!keyRecord) {
+                return { valid: false, reason: 'UNKNOWN_KID', kid };
+            }
+
+            const signingInput = `${hB64}.${pB64}`;
+            const expectedSig = CryptoPrimitives.hmacSha256Hex(keyRecord._privateKey, signingInput);
+            if (!timingSafeEqual(signature, expectedSig)) {
+                return { valid: false, reason: 'SIGNATURE_MISMATCH' };
+            }
+
+            if (payload.jti && RevocationList.isRevoked(payload.jti)) {
+                return { valid: false, reason: 'TOKEN_REVOKED', jti: payload.jti };
+            }
+
+            const now = Math.floor(Date.now() / 1000);
+            if (payload.exp && payload.exp < now) {
+                return { valid: false, reason: 'TOKEN_EXPIRED', expired: true, payload };
+            }
+
+            return { valid: true, payload, header, keyStatus: keyRecord.status };
+        }
+    };
+
+    // =========================================================================
+    // 7.5 CRYPTOGRAPHIC REVOCATION LIST (CRL)
+    // =========================================================================
+    const RevocationList = {
+        STORAGE_KEY: 'sec_crl_registry',
+        _revokedJtis: new Set(),
+        _revokedFamilies: new Set(),
+
+        revoke(id, type = 'jti', reason = 'USER_LOGOUT', ttlMs = 3600000) {
+            if (type === 'family') {
+                this._revokedFamilies.add(id);
+            } else {
+                this._revokedJtis.add(id);
+            }
+            try {
+                if (typeof localStorage !== 'undefined') {
+                    const crl = JSON.parse(localStorage.getItem(this.STORAGE_KEY) || '{}');
+                    crl[id] = { type, reason, revokedAt: Date.now(), expiresAt: Date.now() + ttlMs };
+                    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(crl));
+                }
+            } catch (e) {}
+            return true;
+        },
+
+        revokeFamily(familyId, reason = 'FAMILY_COMPROMISED', ttlMs = 3600000) {
+            return this.revoke(familyId, 'family', reason, ttlMs);
+        },
+
+        isRevoked(id, familyId = null) {
+            if (this._revokedJtis.has(id) || (familyId && this._revokedFamilies.has(familyId))) {
+                return true;
+            }
+            try {
+                if (typeof localStorage !== 'undefined') {
+                    const crl = JSON.parse(localStorage.getItem(this.STORAGE_KEY) || '{}');
+                    if (crl[id] && crl[id].expiresAt > Date.now()) return true;
+                    if (familyId && crl[familyId] && crl[familyId].expiresAt > Date.now()) return true;
+                }
+            } catch (e) {}
+            return false;
+        },
+
+        pruneExpired() {
+            try {
+                if (typeof localStorage !== 'undefined') {
+                    const crl = JSON.parse(localStorage.getItem(this.STORAGE_KEY) || '{}');
+                    const now = Date.now();
+                    let changed = false;
+                    for (const k in crl) {
+                        if (crl[k].expiresAt <= now) {
+                            delete crl[k];
+                            changed = true;
+                        }
+                    }
+                    if (changed) localStorage.setItem(this.STORAGE_KEY, JSON.stringify(crl));
+                }
+            } catch (e) {}
+        }
+    };
+
+    // =========================================================================
+    // 7.6 EMERGENCY BACKUP CODES MANAGER (8 CODES X 8 ALPHANUMERIC SHA-256 HASHED)
+    // =========================================================================
+    const BackupCodesManager = {
+        CHARSET: '23456789ABCDEFGHJKLMNPQRSTUVWXYZ',
+        CODE_LENGTH: 8,
+        TOTAL_CODES: 8,
+
+        _generateSingleCode() {
+            const cryptoObj = (typeof window !== 'undefined' && window.crypto) || 
+                              (typeof globalThis !== 'undefined' && globalThis.crypto);
+            const chars = this.CHARSET;
+            let code = '';
+            if (cryptoObj && cryptoObj.getRandomValues) {
+                const randomBytes = new Uint8Array(this.CODE_LENGTH);
+                cryptoObj.getRandomValues(randomBytes);
+                for (let i = 0; i < this.CODE_LENGTH; i++) {
+                    code += chars[randomBytes[i] % chars.length];
+                }
+            } else {
+                for (let i = 0; i < this.CODE_LENGTH; i++) {
+                    code += chars[Math.floor(Math.random() * chars.length)];
+                }
+            }
+            return code;
+        },
+
+        formatCode(code) {
+            const clean = String(code || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+            if (clean.length === 8) {
+                return `${clean.substring(0, 4)}-${clean.substring(4, 8)}`;
+            }
+            return clean;
+        },
+
+        normalizeCode(input) {
+            return String(input || '').replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+        },
+
+        generateBackupCodesBatch(previousData = null) {
+            const plainCodes = [];
+            const hashedCodes = [];
+            const seen = new Set();
+
+            while (plainCodes.length < this.TOTAL_CODES) {
+                const code = this._generateSingleCode();
+                if (!seen.has(code)) {
+                    seen.add(code);
+                    plainCodes.push(code);
+                    const hash = CryptoPrimitives.sha256Hex(code);
+                    hashedCodes.push({
+                        id: `bcp_${plainCodes.length}`,
+                        hash: hash,
+                        used: false,
+                        usedAt: null,
+                        usedFromIp: null
+                    });
+                }
+            }
+
+            const now = new Date().toISOString();
+            const batchId = `bcp_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
+
+            const history = (previousData && previousData.history) ? [...previousData.history] : [];
+            if (previousData && previousData.batchId) {
+                history.push({
+                    batchId: previousData.batchId,
+                    invalidatedAt: now,
+                    reason: 'NEW_BATCH_GENERATED'
+                });
+            }
+
+            const backupCodesData = {
+                version: 1,
+                batchId,
+                createdAt: now,
+                totalCodes: this.TOTAL_CODES,
+                remainingCount: this.TOTAL_CODES,
+                alertThreshold: 2,
+                codes: hashedCodes,
+                history
+            };
+
+            return {
+                plainCodes,
+                formattedCodes: plainCodes.map(c => this.formatCode(c)),
+                backupCodesData
+            };
+        },
+
+        consumeCode(inputCode, storedData, metadata = {}) {
+            if (!storedData || !Array.isArray(storedData.codes)) {
+                return { success: false, reason: 'NO_CODES_CONFIGURED', message: 'Nenhum código de emergência configurado.' };
+            }
+
+            const normalized = this.normalizeCode(inputCode);
+            if (normalized.length !== this.CODE_LENGTH) {
+                return {
+                    success: false,
+                    reason: 'INVALID_FORMAT',
+                    message: `O código de emergência deve possuir exatamente ${this.CODE_LENGTH} caracteres alfanuméricos.`
+                };
+            }
+
+            const inputHash = CryptoPrimitives.sha256Hex(normalized);
+            let matchedIndex = -1;
+
+            for (let i = 0; i < storedData.codes.length; i++) {
+                const item = storedData.codes[i];
+                if (timingSafeEqual(item.hash, inputHash)) {
+                    matchedIndex = i;
+                    break;
+                }
+            }
+
+            if (matchedIndex === -1) {
+                return {
+                    success: false,
+                    reason: 'CODE_NOT_FOUND',
+                    message: 'Código de emergência inválido ou inexistente.'
+                };
+            }
+
+            const matchedItem = storedData.codes[matchedIndex];
+
+            if (matchedItem.used) {
+                return {
+                    success: false,
+                    reason: 'ALREADY_USED',
+                    usedAt: matchedItem.usedAt,
+                    message: `Este código de emergência já foi utilizado em ${new Date(matchedItem.usedAt).toLocaleString('pt-BR')} e não pode ser reutilizado.`
+                };
+            }
+
+            const now = new Date().toISOString();
+            matchedItem.used = true;
+            matchedItem.usedAt = now;
+            matchedItem.usedFromIp = metadata.ip || '127.0.0.1';
+
+            storedData.remainingCount = storedData.codes.filter(c => !c.used).length;
+            const isLow = storedData.remainingCount <= (storedData.alertThreshold || 2);
+
+            return {
+                success: true,
+                codeId: matchedItem.id,
+                remainingCount: storedData.remainingCount,
+                isLowWarning: isLow,
+                consumedAt: now,
+                message: `Código de emergência aceito com sucesso. Restam ${storedData.remainingCount} de ${storedData.totalCodes} códigos.`
+            };
+        }
+    };
+
+    // =========================================================================
+    // 7.7 OUT-OF-BAND APPROVAL ENGINE (SIMULATED SMS OTP & WEBPUSH INTERACTION)
+    // =========================================================================
+    const OutOfBandApproval = {
+        smsChallenges: new Map(),
+        pushChallenges: new Map(),
+        SMS_EXPIRATION_MS: 5 * 60 * 1000,
+        PUSH_EXPIRATION_MS: 2 * 60 * 1000,
+        COOLDOWN_MS: 60 * 1000,
+
+        maskPhone(phone) {
+            const clean = (phone || '').replace(/\D/g, '');
+            if (clean.length === 11) {
+                return `(${clean.substring(0, 2)}) 9****-${clean.substring(7, 11)}`;
+            }
+            return phone || '(XX) *****-****';
+        },
+
+        requestSMS(phone, username) {
+            const now = Date.now();
+            const masked = this.maskPhone(phone);
+            const existing = this.smsChallenges.get(username);
+
+            if (existing && (now - existing.createdAt < this.COOLDOWN_MS)) {
+                const waitSeconds = Math.ceil((this.COOLDOWN_MS - (now - existing.createdAt)) / 1000);
+                return {
+                    success: false,
+                    cooldown: true,
+                    remainingSeconds: waitSeconds,
+                    message: `Aguarde ${waitSeconds}s antes de solicitar um novo código SMS.`
+                };
+            }
+
+            const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+            const challengeId = `sms_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
+            const expiresAt = now + this.SMS_EXPIRATION_MS;
+
+            this.smsChallenges.set(username, {
+                challengeId,
+                otpHash: CryptoPrimitives.sha256Hex(otpCode),
+                otpCode,
+                expiresAt,
+                createdAt: now,
+                phone: masked,
+                attempts: 0
+            });
+
+            return {
+                success: true,
+                challengeId,
+                maskedPhone: masked,
+                expiresAt,
+                simulatedOtp: otpCode
+            };
+        },
+
+        verifySMS(username, inputCode) {
+            const challenge = this.smsChallenges.get(username);
+            if (!challenge) {
+                return { success: false, reason: 'NO_CHALLENGE', message: 'Nenhum código SMS ativo para este usuário.' };
+            }
+
+            if (Date.now() > challenge.expiresAt) {
+                this.smsChallenges.delete(username);
+                return { success: false, reason: 'EXPIRED', message: 'Código SMS expirado. Solicite um novo reenvio.' };
+            }
+
+            challenge.attempts = (challenge.attempts || 0) + 1;
+            if (challenge.attempts > 3) {
+                this.smsChallenges.delete(username);
+                return { success: false, reason: 'MAX_ATTEMPTS', message: 'Limite de 3 tentativas excedido para este SMS.' };
+            }
+
+            const inputHash = CryptoPrimitives.sha256Hex(String(inputCode || '').trim());
+            if (timingSafeEqual(challenge.otpHash, inputHash)) {
+                this.smsChallenges.delete(username);
+                return { success: true, message: 'Autenticação SMS aprovada com sucesso!' };
+            }
+
+            return {
+                success: false,
+                reason: 'MISMATCH',
+                remainingAttempts: 3 - challenge.attempts,
+                message: `Código SMS incorreto. Restam ${3 - challenge.attempts} tentativa(s).`
+            };
+        },
+
+        async requestWebPushApproval(sessionContext = {}) {
+            const challengeId = `push_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
+            const now = Date.now();
+            const expiresAt = now + this.PUSH_EXPIRATION_MS;
+
+            const pushData = {
+                challengeId,
+                username: sessionContext.username || 'Usuário',
+                device: sessionContext.device || 'Windows 11 (Chrome 124)',
+                ip: sessionContext.ip || '127.0.0.1 (Local)',
+                location: sessionContext.location || 'São Paulo, Brasil',
+                status: 'PENDING',
+                expiresAt
+            };
+            this.pushChallenges.set(challengeId, pushData);
+
+            return { success: true, challengeId, status: 'PENDING', expiresAt };
+        },
+
+        approvePush(challengeId) {
+            const item = this.pushChallenges.get(challengeId);
+            if (!item || Date.now() > item.expiresAt) return false;
+            item.status = 'APPROVED';
+            return true;
+        },
+
+        rejectPush(challengeId) {
+            const item = this.pushChallenges.get(challengeId);
+            if (!item) return false;
+            item.status = 'REJECTED';
+            return true;
+        }
+    };
+
+    // =========================================================================
     // 8. UNIFIED SECURITY OBJECT & GLOBAL EXPOSURE
     // =========================================================================
     return {
@@ -1104,6 +1582,14 @@
         SecureJWT,
         TOTPEngine,
         CSRFProtection,
+
+        // Asymmetric JWKS, Revocation Lists, Backup Codes, and OutOfBand
+        JWKSEngine,
+        RevocationList,
+        BackupCodes: BackupCodesManager,
+        BackupCodesManager,
+        OutOfBand: OutOfBandApproval,
+        OutOfBandApproval,
 
         // A11y
         initA11y

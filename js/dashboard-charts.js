@@ -1037,6 +1037,125 @@
             this.renderClusterGauge();
         }
 
+        /**
+         * Switch date range filter between 7d, 30d, and 90d with smooth transition
+         */
+        setDateRange(range = '7d') {
+            this.currentRange = range;
+            if (range === '30d') {
+                this.accessData = [
+                    { day: '01/10', date: '01/10', count: 24, label: '01 de Outubro' },
+                    { day: '05/10', date: '05/10', count: 38, label: '05 de Outubro' },
+                    { day: '10/10', date: '10/10', count: 42, label: '10 de Outubro' },
+                    { day: '15/10', date: '15/10', count: 56, label: '15 de Outubro' },
+                    { day: '20/10', date: '20/10', count: 68, label: '20 de Outubro' },
+                    { day: '25/10', date: '25/10', count: 85, label: '25 de Outubro' },
+                    { day: '30/10', date: '30/10', count: 94, label: '30 de Outubro' }
+                ];
+            } else if (range === '90d') {
+                this.accessData = [
+                    { day: 'Ago', date: '01/08', count: 320, label: 'Agosto' },
+                    { day: 'Set', date: '01/09', count: 480, label: 'Setembro' },
+                    { day: 'Out', date: '01/10', count: 690, label: 'Outubro' }
+                ];
+            } else {
+                this.currentRange = '7d';
+                this.accessData = [
+                    { day: 'Seg', date: '20/10', count: 18, label: 'Segunda-feira' },
+                    { day: 'Ter', date: '21/10', count: 32, label: 'Terça-feira' },
+                    { day: 'Qua', date: '22/10', count: 26, label: 'Quarta-feira' },
+                    { day: 'Qui', date: '23/10', count: 44, label: 'Quinta-feira' },
+                    { day: 'Sex', date: '24/10', count: 58, label: 'Sexta-feira' },
+                    { day: 'Sáb', date: '25/10', count: 35, label: 'Sábado' },
+                    { day: 'Dom', date: '26/10', count: 68, label: 'Domingo' }
+                ];
+            }
+
+            if (typeof document !== 'undefined') {
+                document.querySelectorAll('.btn-range-filter').forEach(b => {
+                    b.classList.toggle('active', b.getAttribute('data-range') === range);
+                });
+            }
+
+            this.animateTimeline();
+        }
+
+        /**
+         * Pure vector SVG exporter: generates scalable SVG graphic and triggers download
+         */
+        exportAccessChartSVG() {
+            const width = 800;
+            const height = 400;
+            const padding = { top: 40, right: 30, bottom: 50, left: 50 };
+            const plotW = width - padding.left - padding.right;
+            const plotH = height - padding.top - padding.bottom;
+            const baselineY = height - padding.bottom;
+
+            const counts = this.accessData.map(d => d.count);
+            const maxVal = Math.max(...counts, 60);
+            const maxY = Math.ceil(maxVal / 10) * 10;
+
+            const points = this.accessData.map((d, i) => {
+                const x = padding.left + (plotW / (this.accessData.length - 1)) * i;
+                const y = baselineY - (d.count / maxY) * plotH;
+                return { x, y, d };
+            });
+
+            const tension = 0.18;
+            let pathD = `M ${points[0].x.toFixed(1)} ${points[0].y.toFixed(1)}`;
+            for (let i = 0; i < points.length - 1; i++) {
+                const p0 = i > 0 ? points[i - 1] : points[i];
+                const p1 = points[i];
+                const p2 = points[i + 1];
+                const p3 = i + 2 < points.length ? points[i + 2] : p2;
+                const cp1x = (p1.x + (p2.x - p0.x) * tension).toFixed(1);
+                const cp1y = (p1.y + (p2.y - p0.y) * tension).toFixed(1);
+                const cp2x = (p2.x - (p3.x - p1.x) * tension).toFixed(1);
+                const cp2y = (p2.y - (p3.y - p1.y) * tension).toFixed(1);
+                pathD += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+            }
+
+            const areaD = `${pathD} L ${points[points.length - 1].x.toFixed(1)} ${baselineY} L ${points[0].x.toFixed(1)} ${baselineY} Z`;
+
+            let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" style="background:#0c101d; font-family:sans-serif;">
+  <defs>
+    <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FF0043" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#FF0043" stop-opacity="0.0"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="4" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+  <line x1="${padding.left}" y1="${baselineY}" x2="${width - padding.right}" y2="${baselineY}" stroke="#334155" stroke-width="1"/>
+  <path d="${areaD}" fill="url(#areaGrad)" />
+  <path d="${pathD}" fill="none" stroke="#FF0043" stroke-width="3" filter="url(#glow)"/>\n`;
+
+            points.forEach(p => {
+                svg += `  <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="4.5" fill="#FF0043" stroke="#FFFFFF" stroke-width="1.5"/>\n`;
+                svg += `  <text x="${p.x.toFixed(1)}" y="${baselineY + 18}" text-anchor="middle" fill="#94A3B8" font-size="11">${p.d.day}</text>\n`;
+            });
+            svg += `</svg>`;
+
+            if (typeof window !== 'undefined' && typeof document !== 'undefined' && typeof Blob !== 'undefined') {
+                try {
+                    const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `grafico_acessos_${this.currentRange || '7d'}.svg`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    setTimeout(() => URL.revokeObjectURL(url), 1000);
+                } catch (e) {
+                    console.warn('SVG Download trigger bypassed:', e);
+                }
+            }
+            return svg;
+        }
+
         destroy() {
             if (this.timelineAnimId) cancelAnimationFrame(this.timelineAnimId);
             if (this.donutAnimId) cancelAnimationFrame(this.donutAnimId);
@@ -1052,6 +1171,13 @@
     }
 
     // Expose globally on window
-    window.DashboardCharts = DashboardCharts;
-    window.dashboardCharts = new DashboardCharts();
+    if (typeof window !== 'undefined') {
+        window.DashboardCharts = DashboardCharts;
+        window.dashboardCharts = new DashboardCharts();
+    }
+
+    // CommonJS Node.js module export support
+    if (typeof module !== 'undefined' && module.exports) {
+        module.exports = { DashboardCharts };
+    }
 })();

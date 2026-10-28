@@ -1205,6 +1205,177 @@
         assert.equal(verification.payload.sub, 'goku.saiyan', 'Subject da sessão deve corresponder ao usuário');
     });
 
+    // =========================================================================
+    // 13. DOCUMENTOS FISCAIS & ALGORITMOS BRASILEIROS AVANÇADOS
+    // =========================================================================
+    runner.add('Documentos Brasileiros', 'CNH: Validação de dígito verificador duplo com fator de decréscimo e rejeição de repetidos', () => {
+        assert.isTrue(typeof window.Validators.validateCNH === 'function', 'validateCNH deve existir');
+        assert.isTrue(window.Validators.validateCNH('00000000119'), 'Vetor válido de CNH deve retornar true');
+        assert.isFalse(window.Validators.validateCNH('11111111111'), 'CNH com dígitos repetidos deve ser rejeitada');
+        assert.isFalse(window.Validators.validateCNH('12345'), 'CNH com tamanho incorreto deve ser rejeitada');
+    });
+
+    runner.add('Documentos Brasileiros', 'PIS/PASEP: Módulo 11 com pesos oficiais [3,2,9,8,7,6,5,4,3,2]', () => {
+        assert.isTrue(typeof window.Validators.validatePIS === 'function', 'validatePIS deve existir');
+        assert.isTrue(window.Validators.validatePIS('00000000019'), 'Vetor válido de PIS deve retornar true');
+        assert.isTrue(window.Validators.validatePIS('000.0000.001-9'), 'PIS com máscara deve ser validado');
+        assert.isFalse(window.Validators.validatePIS('22222222222'), 'PIS com dígitos repetidos deve ser rejeitado');
+        assert.isFalse(window.Validators.validatePIS('00000000018'), 'PIS com dígito incorreto deve ser rejeitado');
+    });
+
+    runner.add('Documentos Brasileiros', 'Título de Eleitor: Regra oficial do TSE com exceção de resto zero para SP (01) e MG (02)', () => {
+        assert.isTrue(typeof window.Validators.validateTituloEleitor === 'function', 'validateTituloEleitor deve existir');
+        assert.isTrue(window.Validators.validateTituloEleitor('000000010191'), 'Título de eleitor válido de SP deve retornar true');
+        assert.isFalse(window.Validators.validateTituloEleitor('000000010190'), 'Título de eleitor com DV incorreto deve ser rejeitado');
+        assert.isFalse(window.Validators.validateTituloEleitor('000000019991'), 'Título com código UF inválido (99) deve ser rejeitado');
+    });
+
+    runner.add('Documentos Brasileiros', 'RENAVAM: Validação módulo 11 com pesos ponderados', () => {
+        assert.isTrue(typeof window.Validators.validateRENAVAM === 'function', 'validateRENAVAM deve existir');
+        assert.isTrue(window.Validators.validateRENAVAM('00000000019'), 'RENAVAM válido deve retornar true');
+        assert.isFalse(window.Validators.validateRENAVAM('33333333333'), 'RENAVAM com dígitos repetidos deve ser rejeitado');
+        assert.isFalse(window.Validators.validateRENAVAM('00000000015'), 'RENAVAM com DV incorreto deve ser rejeitado');
+    });
+
+    // =========================================================================
+    // 14. INFRAESTRUTURA DE SEGURANÇA AVANÇADA (JWKS, REVOCATION CRL & BACKUP CODES)
+    // =========================================================================
+    runner.add('Infraestrutura de Segurança', 'JWKSEngine: Assinatura assimétrica, verificação e rotação de chaves RFC 7517', () => {
+        const jwks = window.Security.JWKSEngine;
+        assert.isTrue(typeof jwks.signAsymmetric === 'function', 'signAsymmetric deve existir');
+        assert.isTrue(typeof jwks.verifyAsymmetric === 'function', 'verifyAsymmetric deve existir');
+
+        const token = jwks.signAsymmetric({ sub: 'vegeta.saiyan', clearance: 'ultra' });
+        assert.isTrue(typeof token === 'string', 'Token assinado deve ser string');
+        const ver = jwks.verifyAsymmetric(token);
+        assert.isTrue(ver.valid, 'Token assimétrico legítimo deve ser validado');
+        assert.equal(ver.payload.sub, 'vegeta.saiyan', 'Payload sub deve ser preservado');
+
+        const rotation = jwks.rotateKeys();
+        assert.isTrue(Boolean(rotation.newKeyId), 'Rotação deve gerar novo keyId');
+        assert.isTrue(rotation.totalKeys >= 3, 'Total de chaves deve incluir nova chave ativa');
+    });
+
+    runner.add('Infraestrutura de Segurança', 'RevocationList: Revogação de JTI e família de tokens com bloqueio em tempo real', () => {
+        const crl = window.Security.RevocationList;
+        const testJti = 'jti_revocation_test_' + Date.now();
+        assert.isFalse(crl.isRevoked(testJti), 'JTI novo não deve estar revogado');
+
+        crl.revoke(testJti, 'TOKEN_LEAK_SIMULATION');
+        assert.isTrue(crl.isRevoked(testJti), 'JTI revogado deve ser bloqueado imediatamente');
+
+        const testFamily = 'family_batch_' + Date.now();
+        crl.revokeFamily(testFamily, 'REFRESH_TOKEN_COMPROMISE');
+        assert.isTrue(crl.isRevoked('any_jti', testFamily), 'Token pertencente a família revogada deve ser bloqueado');
+    });
+
+    runner.add('Infraestrutura de Segurança', 'BackupCodesManager: Geração de 8 códigos de emergência, hash SHA-256 e consumo único', () => {
+        const mgr = window.Security.BackupCodesManager;
+        const batch = mgr.generateBackupCodesBatch();
+        assert.equal(batch.plainCodes.length, 8, 'Deve gerar exatamente 8 códigos de emergência');
+        assert.equal(batch.backupCodesData.codes.length, 8, 'Deve conter 8 hashes de códigos');
+
+        const code = batch.plainCodes[0];
+        const r1 = mgr.consumeCode(code, batch.backupCodesData);
+        assert.isTrue(r1.success, 'Consumo de código válido na primeira tentativa deve ter sucesso');
+        assert.equal(batch.backupCodesData.remainingCount, 7, 'Contador de códigos restantes deve decrementar para 7');
+
+        const r2 = mgr.consumeCode(code, batch.backupCodesData);
+        assert.isFalse(r2.success, 'Reutilização do mesmo código deve ser rejeitada');
+        assert.equal(r2.reason, 'ALREADY_USED', 'Motivo da rejeição deve ser ALREADY_USED');
+    });
+
+    runner.add('Infraestrutura de Segurança', 'OutOfBandApproval: Desafio SMS com mascaramento, expiração e validação', () => {
+        const oob = window.Security.OutOfBandApproval;
+        const req = oob.requestSMS('(11) 98765-4321', 'test_user_unit');
+        assert.isTrue(req.success, 'Solicitação de SMS deve ter sucesso');
+        assert.equal(req.maskedPhone, '(11) 9****-4321', 'Telefone deve estar mascarado');
+
+        const badVerify = oob.verifySMS('test_user_unit', '000000');
+        assert.isFalse(badVerify.success, 'Código incorreto deve ser rejeitado');
+
+        const goodVerify = oob.verifySMS('test_user_unit', req.simulatedOtp);
+        assert.isTrue(goodVerify.success, 'Código correto deve ser aprovado');
+    });
+
+    // =========================================================================
+    // 15. CONFORMIDADE LGPD (LEI Nº 13.709/2018) & DIREITOS DO TITULAR
+    // =========================================================================
+    runner.add('Conformidade LGPD', 'LGPDDataSubjectRights: Confirmação de tratamento (Art. 18, I) e anonimização (Art. 18, IV)', () => {
+        const dsr = window.exportService.lgpdRights;
+        assert.isTrue(typeof dsr.confirmProcessing === 'function', 'confirmProcessing deve existir');
+
+        const conf = dsr.confirmProcessing();
+        assert.isTrue(conf.hasActiveProcessing, 'Deve confirmar existência de tratamento de dados');
+        assert.includes(conf.legalBasis, 'Art. 7º, V', 'Deve fundamentar na execução de contrato');
+
+        const anon = dsr.anonymizeData({ name: 'Son Goku', email: 'goku@capsulecorp.com.br', cpf: '52998224725' });
+        assert.equal(anon.cpf, '529.***.***-25', 'CPF deve ser anonimizado perante a LGPD');
+        assert.includes(anon.email, 'g***u@', 'Email deve ser ofuscado');
+    });
+
+    runner.add('Conformidade LGPD', 'ExportService: Exportação de Códigos de Emergência em TXT com aviso de segurança', () => {
+        const mgr = window.Security.BackupCodesManager;
+        const batch = mgr.generateBackupCodesBatch();
+        const txt = window.exportService.exportBackupCodesTxt(batch.plainCodes, batch.backupCodesData.batchId);
+        assert.isTrue(typeof txt === 'string', 'exportBackupCodesTxt deve retornar string');
+        assert.includes(txt, 'CODIGOS DE RECUPERACAO DE EMERGENCIA', 'Deve conter cabeçalho');
+        assert.includes(txt, 'INSTRUCOES DE SEGURANCA', 'Deve conter aviso de segurança');
+        assert.includes(txt, batch.backupCodesData.batchId, 'Deve conter ID do lote de códigos');
+    });
+
+    // =========================================================================
+    // 16. FÍSICA COMPUTACIONAL SAIYAN & BIOMETRIA ESPORTS
+    // =========================================================================
+    runner.add('Física & Biometria', 'HighPrecisionPhysicsEngine: Integrador Velocity Verlet e equação diferencial de estamina RK4', () => {
+        const phys = window.HighPrecisionPhysicsEngine;
+        assert.isTrue(typeof phys.integrateVerlet === 'function', 'integrateVerlet deve existir');
+        assert.isTrue(typeof phys.integrateStaminaRK4 === 'function', 'integrateStaminaRK4 deve existir');
+
+        const particle = { x: 0, y: 0, vx: 10, vy: 10 };
+        phys.integrateVerlet(particle, 0, 0.2, 0.016, 0.96);
+        assert.isTrue(particle.x > 0, 'Partícula deve avançar horizontalmente');
+        assert.isTrue(particle.y > 0, 'Partícula deve avançar verticalmente');
+
+        const st1 = phys.integrateStaminaRK4(100, 100, 1.0, 0.5);
+        assert.isTrue(st1 < 100, 'Estamina deve decair sob 100G de força gravitacional');
+        assert.isTrue(st1 > 80, 'Decaimento por RK4 em 0.5s deve ser suave e não instantâneo');
+    });
+
+    runner.add('Física & Biometria', 'SaiyanTransformationEngine: Multiplicadores de poder de luta e cálculo de energia', () => {
+        const trans = window.SaiyanTransformationEngine;
+        assert.isTrue(typeof trans === 'function', 'SaiyanTransformationEngine deve ser uma classe');
+        const engine = new trans();
+        assert.equal(engine.currentForm.id, 'base', 'Forma inicial deve ser base');
+
+        engine.transformTo('ssj1');
+        assert.equal(engine.currentForm.multiplier, 50, 'Super Saiyajin deve ter multiplicador x50');
+
+        engine.transformTo('ultra_instinct');
+        assert.equal(engine.currentForm.multiplier, 500000, 'Instinto Superior deve ter multiplicador x500.000');
+    });
+
+    runner.add('Física & Biometria', 'FittsBiometricsEngine: Índice de Dificuldade de Fitts e Throughput (bits/s)', () => {
+        const fitts = window.FittsBiometricsEngine;
+        assert.isTrue(typeof fitts.calculateIndexDifficulty === 'function', 'calculateIndexDifficulty deve existir');
+        assert.isTrue(typeof fitts.calculateThroughput === 'function', 'calculateThroughput deve existir');
+
+        const id = fitts.calculateIndexDifficulty(200, 40);
+        assert.isTrue(id > 2.5 && id < 3.0, 'Índice de Dificuldade para D=200, W=40 deve ser ~2.58 bits');
+
+        const tp = fitts.calculateThroughput(200, 40, 0.5);
+        assert.isTrue(tp > 4.5, 'Throughput deve ser superior a 4.5 bps para movimento rápido');
+    });
+
+    runner.add('Física & Biometria', 'MotorReactionAnalyzer & EnduranceFatigueMonitor: Decomposição Ex-Gaussiana e Índice de Fadiga', () => {
+        const exG = window.MotorReactionAnalyzer.decomposeExGaussian([190, 205, 210, 225, 290, 320]);
+        assert.isTrue(exG.mu > 0, 'Componente normal Mu deve ser positivo');
+        assert.isTrue(exG.tau > 0, 'Cauda exponencial Tau deve ser positiva');
+
+        const ei = window.EnduranceFatigueMonitor.calculateEnduranceIndex([1000, 1200, 1400, 2500, 8000, 8200, 8400, 9000], 10);
+        assert.isTrue(ei > 0, 'Índice de fadiga deve ser calculado com sucesso');
+    });
+
     // Public test runner triggers
     window.runUnitTests = () => runner.run();
 

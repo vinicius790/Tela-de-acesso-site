@@ -121,6 +121,23 @@ self.addEventListener('activate', (event) => {
     self.clients.claim();
 });
 
+function fetchWithTimeout(request, timeoutMs = 2500) {
+    return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+            reject(new Error(`Network timeout after ${timeoutMs}ms`));
+        }, timeoutMs);
+        fetch(request)
+            .then((res) => {
+                clearTimeout(timer);
+                resolve(res);
+            })
+            .catch((err) => {
+                clearTimeout(timer);
+                reject(err);
+            });
+    });
+}
+
 // --- 3. FETCH STRATEGY ---
 self.addEventListener('fetch', (event) => {
     const request = event.request;
@@ -131,10 +148,10 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // A. Navigation requests (HTML documents) -> Network-First with Cache and Offline Fallback
+    // A. Navigation requests (HTML documents) -> Network-First (2.5s timeout) with Cache and Offline Fallback
     if (request.mode === 'navigate') {
         event.respondWith(
-            fetch(request)
+            fetchWithTimeout(request, 2500)
                 .then((networkResponse) => {
                     if (networkResponse && networkResponse.status === 200) {
                         const copy = networkResponse.clone();

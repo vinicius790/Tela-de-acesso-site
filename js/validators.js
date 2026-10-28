@@ -191,6 +191,54 @@
             const [integerPart, decimalPart] = number.split('.');
             const formattedInt = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
             return `R$ ${formattedInt},${decimalPart}`;
+        },
+
+        /**
+         * Formats string to Brazilian CNH mask: 000000000-00
+         * @param {string|number} value
+         * @returns {string}
+         */
+        cnh(value) {
+            const digits = String(value || '').replace(/\D/g, '').slice(0, 11);
+            if (digits.length <= 9) return digits;
+            return `${digits.slice(0, 9)}-${digits.slice(9, 11)}`;
+        },
+
+        /**
+         * Formats string to Brazilian PIS/PASEP/NIS mask: 000.00000.00-0
+         * @param {string|number} value
+         * @returns {string}
+         */
+        pis(value) {
+            const digits = String(value || '').replace(/\D/g, '').slice(0, 11);
+            if (digits.length <= 3) return digits;
+            if (digits.length <= 8) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+            if (digits.length <= 10) return `${digits.slice(0, 3)}.${digits.slice(3, 8)}.${digits.slice(8)}`;
+            return `${digits.slice(0, 3)}.${digits.slice(3, 8)}.${digits.slice(8, 10)}-${digits.slice(10, 11)}`;
+        },
+
+        /**
+         * Formats string to Brazilian Título de Eleitor mask: 0000 0000 00 00
+         * @param {string|number} value
+         * @returns {string}
+         */
+        tituloEleitor(value) {
+            const digits = String(value || '').replace(/\D/g, '').slice(0, 12);
+            if (digits.length <= 4) return digits;
+            if (digits.length <= 8) return `${digits.slice(0, 4)} ${digits.slice(4)}`;
+            if (digits.length <= 10) return `${digits.slice(0, 4)} ${digits.slice(4, 8)} ${digits.slice(8)}`;
+            return `${digits.slice(0, 4)} ${digits.slice(4, 8)} ${digits.slice(8, 10)} ${digits.slice(10, 12)}`;
+        },
+
+        /**
+         * Formats string to Brazilian RENAVAM mask: 0000000000-0
+         * @param {string|number} value
+         * @returns {string}
+         */
+        renavam(value) {
+            const digits = String(value || '').replace(/\D/g, '').slice(0, 11);
+            if (digits.length <= 10) return digits;
+            return `${digits.slice(0, 10)}-${digits.slice(10, 11)}`;
         }
     };
 
@@ -643,6 +691,148 @@
     }
 
     // =========================================================================
+    // ADVANCED BRAZILIAN DOCUMENT VALIDATORS (CNH, PIS/PASEP, TÍTULO, RENAVAM)
+    // =========================================================================
+
+    const PIS_WEIGHTS = [3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+    const RENAVAM_WEIGHTS = [3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+    const TITULO_UF_REMAINDER_ZERO = new Set(['01', '02']); // SP (01) and MG (02) TSE Exception
+
+    /**
+     * Strict Brazilian CNH (Driver's License) Validator
+     * - Enforces 11 digits
+     * - Rejects repeated sequences (00000000000 to 99999999999)
+     * - Dual check-digit validation with 9->1 and 1->9 weights and decrement factor
+     * @param {string|number} value
+     * @returns {boolean}
+     */
+    function validateCNH(value) {
+        const clean = String(value || '').replace(/\D/g, '');
+        if (clean.length !== 11) return false;
+        if (/^(\d)\1{10}$/.test(clean)) return false;
+
+        // 1st Check Digit
+        let sum1 = 0;
+        for (let i = 0; i < 9; i++) {
+            sum1 += parseInt(clean.charAt(i), 10) * (9 - i);
+        }
+        const rem1 = sum1 % 11;
+        const dv1 = rem1 >= 10 ? 0 : rem1;
+        const dsc = rem1 >= 10 ? 2 : 0;
+
+        if (parseInt(clean.charAt(9), 10) !== dv1) return false;
+
+        // 2nd Check Digit
+        let sum2 = 0;
+        for (let i = 0; i < 9; i++) {
+            sum2 += parseInt(clean.charAt(i), 10) * (i + 1);
+        }
+        let dv2 = ((sum2 % 11) - dsc + 11) % 11;
+        if (dv2 >= 10) dv2 = 0;
+
+        return parseInt(clean.charAt(10), 10) === dv2;
+    }
+
+    /**
+     * Strict Brazilian PIS/PASEP/NIS/NIT Validator
+     * - Enforces 11 digits
+     * - Rejects repeated sequences (00000000000 to 99999999999)
+     * - Module 11 with weights [3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+     * @param {string|number} value
+     * @returns {boolean}
+     */
+    function validatePIS(value) {
+        const clean = String(value || '').replace(/\D/g, '');
+        if (clean.length !== 11) return false;
+        if (/^(\d)\1{10}$/.test(clean)) return false;
+
+        let sum = 0;
+        for (let i = 0; i < 10; i++) {
+            sum += parseInt(clean.charAt(i), 10) * PIS_WEIGHTS[i];
+        }
+        const rem = sum % 11;
+        const dv = rem < 2 ? 0 : 11 - rem;
+
+        return parseInt(clean.charAt(10), 10) === dv;
+    }
+
+    /**
+     * Strict Brazilian Título de Eleitor Validator
+     * - Accepts 5 to 12 digits, normalized to 12 digits with left-zero padding
+     * - Validates state UF code (01 to 28)
+     * - Module 11 with SP (01) and MG (02) remainder-0-to-1 exception rule
+     * @param {string|number} value
+     * @returns {boolean}
+     */
+    function validateTituloEleitor(value) {
+        let clean = String(value || '').replace(/\D/g, '');
+        if (clean.length < 5 || clean.length > 12) return false;
+        clean = clean.padStart(12, '0');
+        if (/^(\d)\1{11}$/.test(clean)) return false;
+
+        const ufStr = clean.slice(8, 10);
+        const ufNum = parseInt(ufStr, 10);
+        if (ufNum < 1 || ufNum > 28) return false;
+
+        // 1st Check Digit (sequential digits: weights 2..9)
+        let sum1 = 0;
+        for (let i = 0; i < 8; i++) {
+            sum1 += parseInt(clean.charAt(i), 10) * (i + 2);
+        }
+        const rem1 = sum1 % 11;
+        let dv1;
+        if (rem1 === 0 && TITULO_UF_REMAINDER_ZERO.has(ufStr)) {
+            dv1 = 1;
+        } else if (rem1 === 10) {
+            dv1 = 0;
+        } else {
+            dv1 = rem1;
+        }
+
+        if (parseInt(clean.charAt(10), 10) !== dv1) return false;
+
+        // 2nd Check Digit (UF digits and DV1: weights 7, 8, 9)
+        const sum2 = parseInt(clean.charAt(8), 10) * 7 +
+                     parseInt(clean.charAt(9), 10) * 8 +
+                     dv1 * 9;
+        const rem2 = sum2 % 11;
+        let dv2;
+        if (rem2 === 0 && TITULO_UF_REMAINDER_ZERO.has(ufStr)) {
+            dv2 = 1;
+        } else if (rem2 === 10) {
+            dv2 = 0;
+        } else {
+            dv2 = rem2;
+        }
+
+        return parseInt(clean.charAt(11), 10) === dv2;
+    }
+
+    /**
+     * Strict Brazilian RENAVAM Validator
+     * - Accepts 9 digits (legacy) or 11 digits (new standard), padded to 11 digits
+     * - Rejects repeated sequences (00000000000 to 99999999999)
+     * - Module 11 weights [3, 2, 9, 8, 7, 6, 5, 4, 3, 2] with *10 mod 11 calculation
+     * @param {string|number} value
+     * @returns {boolean}
+     */
+    function validateRENAVAM(value) {
+        let clean = String(value || '').replace(/\D/g, '');
+        if (clean.length !== 9 && clean.length !== 11) return false;
+        clean = clean.padStart(11, '0');
+        if (/^(\d)\1{10}$/.test(clean)) return false;
+
+        let sum = 0;
+        for (let i = 0; i < 10; i++) {
+            sum += parseInt(clean.charAt(i), 10) * RENAVAM_WEIGHTS[i];
+        }
+        const dv = (sum * 10) % 11;
+        const expected = dv === 10 ? 0 : dv;
+
+        return parseInt(clean.charAt(10), 10) === expected;
+    }
+
+    // =========================================================================
     // REACTIVE INPUT MASK BINDING HELPERS
     // =========================================================================
 
@@ -778,7 +968,11 @@
         calculateAge,
         passwordStrength: getPasswordStrength,
         checkDictionaryAttack,
-        isDictionaryPassword
+        isDictionaryPassword,
+        cnh: validateCNH,
+        pis: validatePIS,
+        tituloEleitor: validateTituloEleitor,
+        renavam: validateRENAVAM
     };
 
     return {
@@ -797,6 +991,10 @@
         getPasswordStrength,
         checkDictionaryAttack,
         isDictionaryPassword,
+        validateCNH,
+        validatePIS,
+        validateTituloEleitor,
+        validateRENAVAM,
 
         // Namespaced collections
         masks,

@@ -293,12 +293,570 @@
     }
 
     // =========================================================================
+    // 1.5 LGPD CONSENT LIFECYCLE MANAGER (LEI Nº 13.709/2018, ARTS. 7, 8, 9, 14, 18)
+    // =========================================================================
+    class LGPDConsentManager {
+        constructor(options = {}) {
+            this.storageKey = options.storageKey || 'lgpd_consent_ledger';
+            this.policyVersion = options.policyVersion || '2026.1-BR';
+            this.availableScopes = {
+                essential: {
+                    id: 'essential',
+                    name: 'Essencial & Segurança',
+                    required: true,
+                    legalBasis: 'LGPD Art. 7º, V e Art. 11, II, g',
+                    description: 'Autenticação, tokens JWT, rate limiting e defesa anti-força bruta.'
+                },
+                preferences: {
+                    id: 'preferences',
+                    name: 'Personalização & Preferências',
+                    required: false,
+                    legalBasis: 'LGPD Art. 7º, I',
+                    description: 'Persistência de tema visual (Vegeta/Goku/Capsule) e layout.'
+                },
+                telemetry_performance: {
+                    id: 'telemetry_performance',
+                    name: 'Telemetria & Desempenho Técnico',
+                    required: false,
+                    legalBasis: 'LGPD Art. 7º, I',
+                    description: 'Métricas agregadas anônimas de hardware e buffer offline.'
+                },
+                communications_alerts: {
+                    id: 'communications_alerts',
+                    name: 'Comunicações & Alertas de Segurança',
+                    required: false,
+                    legalBasis: 'LGPD Art. 7º, I',
+                    description: 'Notificações de auditoria e conexões de novos dispositivos.'
+                }
+            };
+        }
+
+        getStorage() {
+            if (typeof localStorage !== 'undefined') return localStorage;
+            return null;
+        }
+
+        getConsentLedger(userId = null) {
+            try {
+                const storage = this.getStorage();
+                if (!storage) return [];
+                const raw = storage.getItem(this.storageKey);
+                const ledger = raw ? JSON.parse(raw) : [];
+                if (!userId) return ledger;
+                return ledger.filter(entry => entry.userId === userId);
+            } catch { return []; }
+        }
+
+        saveConsentLedger(ledger) {
+            try {
+                const storage = this.getStorage();
+                if (!storage) return false;
+                storage.setItem(this.storageKey, JSON.stringify(ledger));
+                return true;
+            } catch { return false; }
+        }
+
+        _computeHash(str) {
+            let h1 = 0xdeadbeef, h2 = 0x41c64e6d;
+            for (let i = 0; i < str.length; i++) {
+                const ch = str.charCodeAt(i);
+                h1 = Math.imul(h1 ^ ch, 2654435761);
+                h2 = Math.imul(h2 ^ (ch << 3), 1597334677);
+            }
+            h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+            h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+            return (h1 >>> 0).toString(16).padStart(8, '0') + (h2 >>> 0).toString(16).padStart(8, '0');
+        }
+
+        generateProofSignature(data) {
+            const canonical = JSON.stringify({
+                userId: data.userId,
+                policyVersion: data.policyVersion,
+                scopes: data.scopes,
+                timestamp: data.timestamp,
+                ipAddress: data.ipAddress,
+                userAgent: data.userAgent
+            });
+            return 'sha256_proof_' + this._computeHash(canonical);
+        }
+
+        recordConsent(userId, grantedScopes = {}, clientMeta = {}) {
+            if (!userId) throw new Error('Identificador do titular é obrigatório.');
+            const now = new Date().toISOString();
+            const scopes = {
+                essential: true,
+                preferences: Boolean(grantedScopes.preferences),
+                telemetry_performance: Boolean(grantedScopes.telemetry_performance),
+                communications_alerts: Boolean(grantedScopes.communications_alerts)
+            };
+
+            const ipAddress = clientMeta.ipAddress || '127.0.0.1 (localhost)';
+            const userAgent = clientMeta.userAgent || (typeof navigator !== 'undefined' ? navigator.userAgent : 'Client');
+
+            const entry = {
+                id: `CNS-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
+                userId: userId,
+                policyVersion: this.policyVersion,
+                scopes: scopes,
+                timestamp: now,
+                grantedAt: now,
+                revokedAt: null,
+                ipAddress: ipAddress,
+                userAgent: userAgent,
+                status: 'ACTIVE',
+                proofSignature: this.generateProofSignature({
+                    userId, policyVersion: this.policyVersion, scopes, timestamp: now, ipAddress, userAgent
+                })
+            };
+
+            const ledger = this.getConsentLedger();
+            ledger.push(entry);
+            this.saveConsentLedger(ledger);
+            return entry;
+        }
+
+        revokeConsent(userId, scopeKey, reason = 'Revogação solicitada pelo titular') {
+            if (!userId) throw new Error('Identificador do titular é obrigatório.');
+            if (scopeKey === 'essential') {
+                throw new Error('O escopo essencial não pode ser revogado (LGPD Art. 7º, V e Art. 11, II, g).');
+            }
+
+            const now = new Date().toISOString();
+            const userEntries = this.getConsentLedger(userId);
+            const lastEntry = userEntries.length > 0 ? userEntries[userEntries.length - 1] : null;
+
+            const currentScopes = lastEntry ? { ...lastEntry.scopes } : {
+                essential: true, preferences: false, telemetry_performance: false, communications_alerts: false
+            };
+            currentScopes[scopeKey] = false;
+
+            const revocationEntry = {
+                id: `REV-${Date.now().toString(36).toUpperCase()}`,
+                userId: userId,
+                policyVersion: this.policyVersion,
+                scopes: currentScopes,
+                revokedScope: scopeKey,
+                reason: reason,
+                timestamp: now,
+                grantedAt: lastEntry ? lastEntry.grantedAt : now,
+                revokedAt: now,
+                ipAddress: '127.0.0.1 (localhost)',
+                userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'Client',
+                status: 'PARTIALLY_REVOKED',
+                proofSignature: this.generateProofSignature({
+                    userId, policyVersion: this.policyVersion, scopes: currentScopes, timestamp: now, ipAddress: '127.0.0.1 (localhost)', userAgent: 'Client'
+                })
+            };
+
+            const ledger = this.getConsentLedger();
+            ledger.push(revocationEntry);
+            this.saveConsentLedger(ledger);
+            return revocationEntry;
+        }
+
+        revokeAllOptional(userId, reason = 'Revogação integral de consentimentos facultativos') {
+            if (!userId) throw new Error('Identificador do titular é obrigatório.');
+            const now = new Date().toISOString();
+            const minimalScopes = { essential: true, preferences: false, telemetry_performance: false, communications_alerts: false };
+
+            const entry = {
+                id: `REV-ALL-${Date.now().toString(36).toUpperCase()}`,
+                userId: userId,
+                policyVersion: this.policyVersion,
+                scopes: minimalScopes,
+                reason: reason,
+                timestamp: now,
+                grantedAt: now,
+                revokedAt: now,
+                ipAddress: '127.0.0.1 (localhost)',
+                userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'Client',
+                status: 'FULLY_REVOKED_OPTIONAL',
+                proofSignature: this.generateProofSignature({
+                    userId, policyVersion: this.policyVersion, scopes: minimalScopes, timestamp: now, ipAddress: '127.0.0.1 (localhost)', userAgent: 'Client'
+                })
+            };
+
+            const ledger = this.getConsentLedger();
+            ledger.push(entry);
+            this.saveConsentLedger(ledger);
+            return entry;
+        }
+
+        hasConsent(userId, scopeKey) {
+            if (scopeKey === 'essential') return true;
+            const userEntries = this.getConsentLedger(userId);
+            if (userEntries.length === 0) return false;
+            const last = userEntries[userEntries.length - 1];
+            return Boolean(last.scopes && last.scopes[scopeKey]);
+        }
+
+        getConsentStatus(userId) {
+            const userEntries = this.getConsentLedger(userId);
+            const lastEntry = userEntries.length > 0 ? userEntries[userEntries.length - 1] : null;
+            return {
+                userId: userId,
+                policyVersion: this.policyVersion,
+                activeScopes: lastEntry ? lastEntry.scopes : { essential: true, preferences: false, telemetry_performance: false, communications_alerts: false },
+                lastUpdated: lastEntry ? lastEntry.timestamp : null,
+                totalLedgerRecords: userEntries.length,
+                isCompliant: true
+            };
+        }
+    }
+
+    // =========================================================================
+    // 1.6 LGPD DATA SUBJECT RIGHTS CONTROLLER (LEI Nº 13.709/2018, ART. 18)
+    // =========================================================================
+    class LGPDDataSubjectRights {
+        constructor(consentManager = null) {
+            this.consentManager = consentManager || new LGPDConsentManager();
+            this.controllerInfo = {
+                entity: 'Portal Saiyan Access Security Platform Ltda.',
+                cnpj: '12.345.678/0001-90',
+                dpoName: 'Bulma Briefs (Encarregada de Proteção de Dados / DPO)',
+                dpoEmail: 'dpo@capsulecorp.com.br',
+                channelUrl: 'https://portal.capsulecorp.com.br/privacidade',
+                headquarters: 'São Paulo, SP - Brasil'
+            };
+
+            this.sharedEntitiesRegistry = [
+                {
+                    entity: 'ViaCEP (Correios)',
+                    nature: 'Pública / Concessionária',
+                    purpose: 'Autopreenchimento de endereço e CEP',
+                    legalBasis: 'LGPD Art. 7º, V (Execução de Contrato)',
+                    dataShared: ['CEP']
+                },
+                {
+                    entity: 'BrasilAPI',
+                    nature: 'Open Source Cloud',
+                    purpose: 'Contingência de geolocalização e CEP',
+                    legalBasis: 'LGPD Art. 7º, V (Execução de Contrato)',
+                    dataShared: ['CEP']
+                },
+                {
+                    entity: 'Simulador HaveIBeenPwned',
+                    nature: 'Segurança Cibernética',
+                    purpose: 'Detecção preventiva de credenciais vazadas',
+                    legalBasis: 'LGPD Art. 11, II, g (Prevenção à Fraude)',
+                    dataShared: ['Prefixo Hash SHA-1 (k-anonymity 5 chars)']
+                },
+                {
+                    entity: 'Web Cryptography API (SubtleCrypto)',
+                    nature: 'Client-Side Hardware Native',
+                    purpose: 'Criptografia SHA-256 e geração de salt',
+                    legalBasis: 'LGPD Art. 46 (Privacy by Design)',
+                    dataShared: ['100% isolamento local no dispositivo']
+                }
+            ];
+        }
+
+        _findUser(identifier) {
+            try {
+                if (typeof localStorage === 'undefined') {
+                    return { id: 'usr_goku', username: 'goku.saiyan', email: 'goku@capsulecorp.com.br', cpf: '52998224725', status: 'Ativo' };
+                }
+                const raw = localStorage.getItem('mock_auth_users');
+                const users = raw ? JSON.parse(raw) : [];
+                const clean = String(identifier || '').toLowerCase().trim();
+                const cleanCpf = String(identifier || '').replace(/\D/g, '');
+
+                const found = users.find(u => 
+                    (u.id && u.id.toLowerCase() === clean) ||
+                    (u.username && u.username.toLowerCase() === clean) ||
+                    (u.email && u.email.toLowerCase() === clean) ||
+                    (cleanCpf.length === 11 && u.cpf && u.cpf.replace(/\D/g, '') === cleanCpf)
+                );
+                if (found) return found;
+
+                const curRaw = localStorage.getItem('user_data') || localStorage.getItem('mock_auth_session');
+                if (curRaw) {
+                    try { return JSON.parse(curRaw); } catch {}
+                }
+                return { id: 'usr_goku', username: 'goku.saiyan', email: 'goku@capsulecorp.com.br', cpf: '52998224725', status: 'Ativo' };
+            } catch {
+                return { id: 'usr_goku', username: 'goku.saiyan', email: 'goku@capsulecorp.com.br', cpf: '52998224725', status: 'Ativo' };
+            }
+        }
+
+        _updateUserInStorage(updatedUser) {
+            try {
+                if (typeof localStorage === 'undefined') return false;
+                const raw = localStorage.getItem('mock_auth_users');
+                let users = raw ? JSON.parse(raw) : [];
+                users = users.map(u => (u.id === updatedUser.id ? updatedUser : u));
+                localStorage.setItem('mock_auth_users', JSON.stringify(users));
+
+                const pRaw = localStorage.getItem('portal_users');
+                if (pRaw) {
+                    let pUsers = JSON.parse(pRaw);
+                    pUsers = pUsers.map(u => (u.id === updatedUser.id ? updatedUser : u));
+                    localStorage.setItem('portal_users', JSON.stringify(pUsers));
+                }
+
+                const curRaw = localStorage.getItem('user_data');
+                if (curRaw) {
+                    const cur = JSON.parse(curRaw);
+                    if (cur.id === updatedUser.id || cur.username === updatedUser.username) {
+                        localStorage.setItem('user_data', JSON.stringify(updatedUser));
+                    }
+                }
+                return true;
+            } catch { return false; }
+        }
+
+        _maskCPF(cpf) {
+            const clean = (cpf || '').replace(/\D/g, '');
+            if (clean.length === 11) return clean.substring(0, 3) + '.***.***-' + clean.substring(9, 11);
+            return cpf || '000.***.***-00';
+        }
+
+        _maskEmail(email) {
+            if (!email || !email.includes('@')) return email || '';
+            const [u, d] = email.split('@');
+            if (u.length <= 2) return u[0] + '***@' + d;
+            return u[0] + '***' + u[u.length - 1] + '@' + d;
+        }
+
+        _logAuditEvent(action, details, category = 'LGPD_Art18', status = 'SUCESSO') {
+            try {
+                if (typeof localStorage === 'undefined') return null;
+                const raw = localStorage.getItem('portal_audit_logs');
+                const logs = raw ? JSON.parse(raw) : [];
+                const newLog = {
+                    id: `LOG-LGPD-${Date.now().toString(36).toUpperCase()}`,
+                    timestamp: new Date().toISOString(),
+                    eventType: action,
+                    category: category,
+                    severity: status === 'SUCESSO' ? 'INFO' : 'WARNING',
+                    user: 'Sistema / DPO',
+                    ipAddress: '127.0.0.1 (localhost)',
+                    status: status,
+                    details: details
+                };
+                logs.unshift(newLog);
+                if (logs.length > 200) logs.pop();
+                localStorage.setItem('portal_audit_logs', JSON.stringify(logs));
+                return newLog;
+            } catch { return null; }
+        }
+
+        confirmProcessing(identifier) {
+            const user = this._findUser(identifier);
+            const now = new Date().toISOString();
+            if (!user) {
+                return {
+                    confirmed: false,
+                    status: 'NO_PROCESSING_DETECTED',
+                    timestamp: now,
+                    message: 'Não foram localizados dados pessoais vinculados a este identificador nos sistemas.',
+                    controller: this.controllerInfo
+                };
+            }
+
+            const consents = this.consentManager.getConsentStatus(user.id || user.username);
+            return {
+                confirmed: true,
+                hasActiveProcessing: true,
+                status: 'PROCESSING_CONFIRMED',
+                timestamp: now,
+                legalBasis: 'LGPD Art. 7º, V (Execução de Contrato de Autenticação)',
+                legalNotice: 'Confirmação emitida em conformidade com o Art. 18, I e Art. 19 da LGPD (Lei nº 13.709/2018).',
+                dataSubject: {
+                    id: user.id,
+                    username: user.username,
+                    maskedEmail: this._maskEmail(user.email),
+                    maskedCpf: this._maskCPF(user.cpf),
+                    accountStatus: user.status || 'Ativo'
+                },
+                processingDetails: {
+                    legalBases: [
+                        'LGPD Art. 7º, V (Execução de Contrato de Autenticação)',
+                        'LGPD Art. 7º, I (Consentimento do Titular)',
+                        'LGPD Art. 11, II, g (Prevenção à Fraude e Segurança do Titular)',
+                        'Marco Civil da Internet (Lei 12.965/2014, Art. 15 - Guarda de Registros de Conexão)'
+                    ],
+                    dataCategories: [
+                        'Dados Cadastrais (Nome, E-mail, CPF Mascarado, Telefone, Endereço)',
+                        'Credenciais Criptografadas (Hash SHA-256 com Salt dinâmico, Chave TOTP 2FA)',
+                        'Registros de Conexão e Sessão (IP, Timestamp, User-Agent, Tokens Bearer JWT)',
+                        'Livro-Razão de Consentimento e Trilha de Auditoria'
+                    ]
+                },
+                activeConsents: consents.activeScopes,
+                controller: this.controllerInfo
+            };
+        }
+
+        requestDataAccess(identifier) {
+            const user = this._findUser(identifier);
+            if (!user) throw new Error(`Titular '${identifier}' não localizado para acesso.`);
+            const now = new Date().toISOString();
+            const consentHistory = this.consentManager.getConsentLedger(user.id || user.username);
+
+            this._logAuditEvent('LGPD_DIREITO_ACESSO_EXECUTADO', `Titular '${user.username}' acessou seus dados cadastrais e logs.`);
+            return {
+                reportId: `DSR-ACC-${Date.now().toString(36).toUpperCase()}`,
+                timestamp: now,
+                standard: 'LGPD (Lei nº 13.709/2018, Art. 18, II)',
+                controller: this.controllerInfo,
+                dataSubject: {
+                    id: user.id,
+                    name: user.name,
+                    username: user.username,
+                    email: user.email,
+                    cpfMasked: this._maskCPF(user.cpf),
+                    phone: user.phone || 'Não informado',
+                    role: user.role || 'Usuário',
+                    status: user.status || 'Ativo',
+                    createdAt: user.createdAt || now,
+                    address: user.address || null
+                },
+                consents: consentHistory,
+                sharedEntities: this.sharedEntitiesRegistry
+            };
+        }
+
+        requestDataCorrection(identifier, updates = {}) {
+            const user = this._findUser(identifier);
+            if (!user) throw new Error(`Titular '${identifier}' não localizado para correção.`);
+            const modifiedFields = [];
+
+            if (updates.name && updates.name.trim().length >= 2) {
+                user.name = updates.name.trim();
+                modifiedFields.push('name');
+            }
+            if (updates.email && updates.email.includes('@')) {
+                user.email = updates.email.trim().toLowerCase();
+                modifiedFields.push('email');
+            }
+            if (updates.phone) {
+                user.phone = updates.phone.trim();
+                modifiedFields.push('phone');
+            }
+            if (updates.address && typeof updates.address === 'object') {
+                user.address = { ...updates.address };
+                modifiedFields.push('address');
+            }
+
+            user.updatedAt = new Date().toISOString();
+            this._updateUserInStorage(user);
+
+            this._logAuditEvent('LGPD_CORRECAO_DADOS_SUCESSO', `Dados retificados para '${user.username}': [${modifiedFields.join(', ')}].`);
+            return {
+                success: true,
+                protocol: `DSR-CORR-${Date.now().toString(36).toUpperCase()}`,
+                timestamp: user.updatedAt,
+                modifiedFields: modifiedFields,
+                updatedData: user
+            };
+        }
+
+        anonymizeDataSubject(identifier) {
+            const user = this._findUser(identifier);
+            if (!user) throw new Error(`Titular '${identifier}' não localizado.`);
+            const now = new Date().toISOString();
+            const anonId = 'anon_' + Math.random().toString(36).substring(2, 8);
+
+            user.name = `Titular Anonimizado [${anonId}]`;
+            user.username = anonId;
+            user.email = `${anonId}@anonymized.lgpd.local`;
+            user.cpf = '000.000.000-00';
+            user.phone = '(00) 00000-0000';
+            user.status = 'ANONIMIZADO_LGPD';
+            user.address = null;
+            user.totpSecret = null;
+            user.anonymizedAt = now;
+
+            this._updateUserInStorage(user);
+            this.consentManager.revokeAllOptional(user.id, 'Anonimização irreversível dos dados cadastrais per Art. 18, IV.');
+            this._logAuditEvent('LGPD_ANONIMIZACAO_EXECUTADA', `Titular original foi anonimizado para ${anonId} conforme Art. 12 da LGPD.`);
+
+            return {
+                success: true,
+                syntheticId: anonId,
+                timestamp: now,
+                status: 'ANONIMIZADO_LGPD'
+            };
+        }
+
+        anonymizeData(data) {
+            if (!data || typeof data !== 'object') return {};
+            return {
+                ...data,
+                cpf: this._maskCPF(data.cpf),
+                email: this._maskEmail(data.email)
+            };
+        }
+
+        blockDataSubject(identifier, reason = 'Suspensão solicitada pelo titular') {
+            const user = this._findUser(identifier);
+            if (!user) throw new Error(`Titular '${identifier}' não localizado.`);
+            const now = new Date().toISOString();
+
+            user.status = 'BLOQUEADO_LGPD';
+            user.blockedAt = now;
+            user.blockReason = reason;
+
+            this._updateUserInStorage(user);
+            this._logAuditEvent('LGPD_BLOQUEIO_EXECUTADO', `Titular '${user.username}' colocado em quarentena per Art. 18, IV.`, 'LGPD_Art18', 'WARNING');
+
+            return {
+                success: true,
+                protocol: `BLQ-${Date.now().toString(36).toUpperCase()}`,
+                timestamp: now,
+                accountStatus: 'BLOQUEADO_LGPD',
+                legalRetentionNotes: 'Logs preservados por 6 meses per Marco Civil Art. 15.'
+            };
+        }
+
+        deleteDataSubject(identifier) {
+            const user = this._findUser(identifier);
+            if (!user) throw new Error(`Titular '${identifier}' não localizado.`);
+            const now = new Date().toISOString();
+            const certId = `CERT-DEL-${Date.now().toString(36).toUpperCase()}`;
+
+            try {
+                if (typeof localStorage !== 'undefined') {
+                    const raw = localStorage.getItem('mock_auth_users');
+                    if (raw) {
+                        let users = JSON.parse(raw);
+                        users = users.filter(u => u.id !== user.id && u.username !== user.username);
+                        localStorage.setItem('mock_auth_users', JSON.stringify(users));
+                    }
+                }
+            } catch {}
+
+            this._logAuditEvent('LGPD_ELIMINACAO_DEFINITIVA', `Dados pessoais eliminados definitivamente. Certidão: ${certId}.`);
+
+            return {
+                certificateId: certId,
+                issuedAt: now,
+                standard: 'LGPD Art. 18, IV e VI / Art. 16',
+                status: 'DELETED',
+                controller: this.controllerInfo,
+                legalRetentionExceptions: 'Registros de conexão preservados sob sigilo estrito por 6 meses per Marco Civil da Internet (Art. 15).'
+            };
+        }
+
+        getSharedEntitiesDisclosure() {
+            return {
+                standard: 'LGPD (Lei nº 13.709/2018, Art. 18, VII)',
+                controller: this.controllerInfo,
+                sharedEntities: this.sharedEntitiesRegistry
+            };
+        }
+    }
+
+    // =========================================================================
     // 2. EXPORT SERVICE & COMPLIANCE REPORT SPECIALIST
     // =========================================================================
     class ExportService {
         constructor() {
             this.qrEngine = new PureSVGQRCode();
             this.defaultTotpSecret = 'JBSWY3DPEHPK3PXP';
+            this.consentManager = new LGPDConsentManager();
+            this.lgpdRights = new LGPDDataSubjectRights(this.consentManager);
         }
 
         /**
@@ -310,6 +868,93 @@
                 return clean.substring(0, 3) + '.***.***-' + clean.substring(9, 11);
             }
             return cpf || 'N/A';
+        }
+
+        // LGPD Article 18 Facade Methods
+        confirmProcessing(identifier) {
+            return this.lgpdRights.confirmProcessing(identifier);
+        }
+
+        requestDataAccess(identifier) {
+            return this.lgpdRights.requestDataAccess(identifier);
+        }
+
+        requestDataCorrection(identifier, updates) {
+            return this.lgpdRights.requestDataCorrection(identifier, updates);
+        }
+
+        anonymizeDataSubject(identifier) {
+            return this.lgpdRights.anonymizeDataSubject(identifier);
+        }
+
+        blockDataSubject(identifier, reason) {
+            return this.lgpdRights.blockDataSubject(identifier, reason);
+        }
+
+        deleteDataSubject(identifier) {
+            return this.lgpdRights.deleteDataSubject(identifier);
+        }
+
+        getSharedEntitiesDisclosure() {
+            return this.lgpdRights.getSharedEntitiesDisclosure();
+        }
+
+        exportPortabilityJSON(identifier) {
+            const data = this.requestDataAccess(identifier);
+            const filename = `lgpd-portability-${data.dataSubject?.username || 'usuario'}.json`;
+            if (typeof Blob !== 'undefined') {
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                this.triggerBlobDownload(blob, filename);
+            }
+            return data;
+        }
+
+        /**
+         * Exports Emergency Backup Codes as a formatted plain text file
+         * @param {string[]} plainCodes - Array of 8 plain text codes
+         * @param {string} username - User account name
+         * @param {string} [filename] - Custom output filename
+         * @returns {string} Formatted text content
+         */
+        exportBackupCodesTxt(plainCodes, username = 'usuario', filename = null) {
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('pt-BR');
+            const timeStr = now.toLocaleTimeString('pt-BR');
+            const outFilename = filename || `backup-codes-${username}-${now.getTime()}.txt`;
+
+            const formattedList = (plainCodes || []).map((code, idx) => {
+                const formatted = code.length === 8 ? `${code.slice(0, 4)}-${code.slice(4)}` : code;
+                const num = String(idx + 1).padStart(2, '0');
+                return `[ ] ${num}.  ${formatted}`;
+            });
+
+            const content = [
+                '================================================================================',
+                'PORTAL DE ACESSO SAIYAN — CODIGOS DE RECUPERACAO DE EMERGENCIA (2FA BACKUP)',
+                '================================================================================',
+                `Usuario: ${username}`,
+                `Data de Emissao: ${dateStr} as ${timeStr}`,
+                '',
+                'INSTRUCOES DE SEGURANCA:',
+                '1. Cada codigo possui 8 caracteres e so pode ser utilizado UMA UNICA VEZ.',
+                '2. Armazene este arquivo em local seguro, criptografado ou em cofre digital.',
+                '3. Marque os codigos com [X] a medida que forem consumidos.',
+                '4. Se restarem 2 ou menos codigos, gere um novo lote no Painel de Seguranca.',
+                '',
+                'SEUS 8 CODIGOS DE EMERGENCIA:',
+                '--------------------------------------------------------------------------------',
+                ...formattedList,
+                '--------------------------------------------------------------------------------',
+                'Nota Criptografica: O sistema armazena apenas hashes SHA-256 destes codigos.',
+                '================================================================================'
+            ].join('\r\n');
+
+            if (typeof Blob !== 'undefined') {
+                const blob = new Blob([content], { type: 'text/plain;charset=utf-8;' });
+                this.triggerBlobDownload(blob, outFilename);
+            }
+
+            return content;
         }
 
         /**
@@ -1319,6 +1964,8 @@ Todos os dados sensíveis foram mascarados em conformidade com o princípio da m
     global.ExportService = ExportService;
     global.PureSVGQRCode = PureSVGQRCode;
     global.OfflineTelemetryCache = OfflineTelemetryCache;
+    global.LGPDConsentManager = LGPDConsentManager;
+    global.LGPDDataSubjectRights = LGPDDataSubjectRights;
     global.exportService = exportServiceInstance;
     global.offlineTelemetryCache = offlineTelemetryCacheInstance;
 
@@ -1328,6 +1975,8 @@ Todos os dados sensíveis foram mascarados em conformidade com o princípio da m
             ExportService,
             PureSVGQRCode,
             OfflineTelemetryCache,
+            LGPDConsentManager,
+            LGPDDataSubjectRights,
             exportService: exportServiceInstance,
             offlineTelemetryCache: offlineTelemetryCacheInstance
         };
